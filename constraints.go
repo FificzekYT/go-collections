@@ -15,10 +15,6 @@ type Comparator[T any] func(a, b T) int
 // Equaler reports whether two values are equal.
 type Equaler[T any] func(a, b T) bool
 
-// Hasher computes a hash code for a value.
-// Implementations should aim for good distribution and performance.
-type Hasher[T any] func(value T) uint64
-
 // EqualFunc returns a default Equaler for comparable types using ==.
 func EqualFunc[T comparable]() Equaler[T] {
 	return func(a, b T) bool { return a == b }

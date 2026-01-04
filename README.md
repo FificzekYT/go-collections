@@ -130,9 +130,6 @@ type Comparator[T any] func(a, b T) int
 
 // Equaler reports whether two values are equal.
 type Equaler[T any] func(a, b T) bool
-
-// Hasher computes a hash code for a value.
-type Hasher[T any] func(value T) uint64
 ```
 
 ### Helper Functions
