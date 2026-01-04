@@ -1,0 +1,95 @@
+package collections
+
+import (
+	"iter"
+	"slices"
+)
+
+// arrayStack is a slice-backed LIFO stack.
+// Top is at the end of the slice for O(1) push/pop.
+type arrayStack[T any] struct {
+	data []T
+}
+
+// NewArrayStack creates an empty Stack.
+func NewArrayStack[T any]() Stack[T] {
+	return &arrayStack[T]{data: make([]T, 0)}
+}
+
+// NewArrayStackWithCapacity creates a stack with capacity hint.
+func NewArrayStackWithCapacity[T any](capacity int) Stack[T] {
+	if capacity < 0 {
+		capacity = 0
+	}
+	return &arrayStack[T]{data: make([]T, 0, capacity)}
+}
+
+// NewArrayStackFrom creates a stack initialized with elements (bottom to top).
+func NewArrayStackFrom[T any](elements ...T) Stack[T] {
+	cp := make([]T, len(elements))
+	copy(cp, elements)
+	return &arrayStack[T]{data: cp}
+}
+
+// Size returns the number of elements.
+func (s *arrayStack[T]) Size() int { return len(s.data) }
+
+// IsEmpty reports whether empty.
+func (s *arrayStack[T]) IsEmpty() bool { return len(s.data) == 0 }
+
+// Clear removes all elements (retains capacity).
+func (s *arrayStack[T]) Clear() { s.data = s.data[:0] }
+
+// String returns a concise representation (bottom..top).
+func (s *arrayStack[T]) String() string {
+	return formatCollection("arrayStack", s.Seq())
+}
+
+// Push adds an element to the top.
+func (s *arrayStack[T]) Push(element T) { s.data = append(s.data, element) }
+
+// PushAll adds all elements to the top (last becomes top).
+func (s *arrayStack[T]) PushAll(elements ...T) { s.data = append(s.data, elements...) }
+
+// Pop removes and returns the top element, or (zero, false) if empty.
+func (s *arrayStack[T]) Pop() (T, bool) {
+	n := len(s.data)
+	if n == 0 {
+		var zero T
+		return zero, false
+	}
+	v := s.data[n-1]
+	s.data = s.data[:n-1]
+	return v, true
+}
+
+// Peek returns the top element without removing it, or (zero, false) if empty.
+func (s *arrayStack[T]) Peek() (T, bool) {
+	n := len(s.data)
+	if n == 0 {
+		var zero T
+		return zero, false
+	}
+	return s.data[n-1], true
+}
+
+// ToSlice returns elements from bottom to top (snapshot).
+func (s *arrayStack[T]) ToSlice() []T {
+	return slices.Clone(s.data)
+}
+
+// Seq returns a sequence from top to bottom (LIFO order).
+func (s *arrayStack[T]) Seq() iter.Seq[T] {
+	return func(yield func(T) bool) {
+		for _, v := range slices.Backward(s.data) {
+			if !yield(v) {
+				return
+			}
+		}
+	}
+}
+
+// Compile-time conformance
+var (
+	_ Stack[int] = (*arrayStack[int])(nil)
+)
