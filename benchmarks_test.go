@@ -21,7 +21,7 @@ func BenchmarkHashSet_AddContains(b *testing.B) {
 				}
 				for _, v := range vals {
 					if !s.Contains(v) {
-						b.Fatal("missing")
+						b.Fatal("Missing")
 					}
 				}
 			}
@@ -45,7 +45,7 @@ func BenchmarkTreeMap_PutGet(b *testing.B) {
 				}
 				for _, k := range keys {
 					if v, ok := m.Get(k); !ok || v != k {
-						b.Fatal("missing")
+						b.Fatal("Missing")
 					}
 				}
 			}
@@ -78,7 +78,7 @@ func benchSetAddRemoveContainsIter(b *testing.B, name string, newSet func() Set[
 				}
 				for _, v := range vals {
 					if !s.Contains(v) {
-						b.Fatal("contains failed")
+						b.Fatal("Contains failed")
 					}
 				}
 				for range s.Seq() {

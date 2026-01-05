@@ -20,43 +20,47 @@ func seqOf[T any](vals []T) func(func(T) bool) {
 }
 
 func TestHashSet_BasicCRUD(t *testing.T) {
+	t.Parallel()
 	s := NewHashSetFrom(1, 2, 2, 3)
-	assert.Equal(t, 3, s.Size())
-	assert.True(t, s.Contains(1) && s.Contains(2) && s.Contains(3))
-	assert.False(t, s.Contains(9))
+	assert.Equal(t, 3, s.Size(), "Size should ignore duplicates")
+	assert.True(t, s.Contains(1) && s.Contains(2) && s.Contains(3), "Initial elements should be present")
+	assert.False(t, s.Contains(9), "Absent element should not be contained")
 	added := s.Add(2)
-	assert.False(t, added)
-	assert.True(t, s.Add(4))
-	assert.True(t, s.Remove(2))
-	assert.False(t, s.Remove(2))
+	assert.False(t, added, "Adding duplicate should return false")
+	assert.True(t, s.Add(4), "Add new element should return true")
+	assert.True(t, s.Remove(2), "Remove should succeed for present element")
+	assert.False(t, s.Remove(2), "Remove should fail for already removed element")
 	// Pop
 	_, ok := s.Pop()
-	require.True(t, ok)
+	require.True(t, ok, "Pop should succeed on non-empty set")
 }
 
 func TestHashSet_AddRemoveAllSeq(t *testing.T) {
+	t.Parallel()
 	s := NewHashSet[int]()
 	added := s.AddAll(1, 2, 3, 3)
-	assert.Equal(t, 3, added)
+	assert.Equal(t, 3, added, "AddAll should count unique inserts")
 	added = s.AddSeq(seqOf([]int{3, 4, 5}))
-	assert.Equal(t, 2, added)
+	assert.Equal(t, 2, added, "AddSeq should add only new elements")
 	removed := s.RemoveAll(5, 6)
-	assert.Equal(t, 1, removed)
+	assert.Equal(t, 1, removed, "RemoveAll should remove only present elements")
 	removed = s.RemoveSeq(seqOf([]int{1, 4, 7}))
-	assert.Equal(t, 2, removed)
+	assert.Equal(t, 2, removed, "RemoveSeq should remove two present elements")
 }
 
 func TestHashSet_RemoveRetainFunc(t *testing.T) {
+	t.Parallel()
 	s := NewHashSetFrom(1, 2, 3, 4, 5)
 	removed := s.RemoveFunc(func(v int) bool { return v%2 == 0 })
-	require.Equal(t, 2, removed)
-	removed = s.RetainFunc(func(v int) bool { return v > 3 }) // keep >3
-	assert.Equal(t, 2, removed)                               // removed 1,3
-	assert.True(t, s.Contains(5))
+	require.Equal(t, 2, removed, "RemoveFunc should remove two evens")
+	removed = s.RetainFunc(func(v int) bool { return v > 3 })          // keep >3
+	assert.Equal(t, 2, removed, "Removed count should match expected") // removed 1,3
+	assert.True(t, s.Contains(5), "Largest element should remain")
 	assert.Equal(t, 1, s.Size(), "Size should be 1 after RetainFunc, state=%v", s.ToSlice())
 }
 
 func TestHashSet_SeqForEach(t *testing.T) {
+	t.Parallel()
 	s := NewHashSetFrom(1, 2, 3, 4)
 	collected := make([]int, 0, s.Size())
 	for v := range s.Seq() {
@@ -69,10 +73,11 @@ func TestHashSet_SeqForEach(t *testing.T) {
 		n++
 		return false // stop immediately
 	})
-	assert.Equal(t, 1, n)
+	assert.Equal(t, 1, n, "ForEach should stop after first element")
 }
 
 func TestHashSet_Algebra(t *testing.T) {
+	t.Parallel()
 	a := NewHashSetFrom(1, 2, 3, 4)
 	b := NewHashSetFrom(3, 4, 5)
 	u := a.Union(b).ToSlice()
@@ -90,99 +95,139 @@ func TestHashSet_Algebra(t *testing.T) {
 }
 
 func TestHashSet_RelationsAndSearch(t *testing.T) {
+	t.Parallel()
 	a := NewHashSetFrom(1, 2, 3)
 	b := NewHashSetFrom(1, 2, 3, 4)
 	c := NewHashSetFrom(4, 5)
-	assert.True(t, a.IsSubsetOf(b))
-	assert.True(t, b.IsSupersetOf(a))
-	assert.True(t, a.IsProperSubsetOf(b))
-	assert.True(t, b.IsProperSupersetOf(a))
-	assert.True(t, a.IsDisjoint(c))
-	assert.False(t, c.IsDisjoint(b))
-	assert.True(t, a.Equals(NewHashSetFrom(2, 1, 3)))
+	assert.True(t, a.IsSubsetOf(b), "Set A should be subset of set B")
+	assert.True(t, b.IsSupersetOf(a), "Set B should be superset of set A")
+	assert.True(t, a.IsProperSubsetOf(b), "Set A should be proper subset of set B")
+	assert.True(t, b.IsProperSupersetOf(a), "Set B should be proper superset of set A")
+	assert.True(t, a.IsDisjoint(c), "Set A and set C should be disjoint")
+	assert.False(t, c.IsDisjoint(b), "Set C and set B should not be disjoint")
+	assert.True(t, a.Equals(NewHashSetFrom(2, 1, 3)), "Equals should ignore order")
 	v, ok := a.Find(func(x int) bool { return x%2 == 0 })
-	require.True(t, ok)
-	assert.Equal(t, 0, v%2)
-	assert.True(t, a.Any(func(x int) bool { return x == 2 }))
-	assert.True(t, a.Every(func(x int) bool { return x >= 1 && x <= 3 }))
+	require.True(t, ok, "Find should locate an even element")
+	assert.Equal(t, 0, v%2, "Found value should be even")
+	assert.True(t, a.Any(func(x int) bool { return x == 2 }), "Any should be true for existing element")
+	assert.True(t, a.Every(func(x int) bool { return x >= 1 && x <= 3 }), "Every should be true for range")
 }
 
 func TestHashSet_EmptySingle(t *testing.T) {
+	t.Parallel()
 	s := NewHashSet[int]()
-	assert.True(t, s.IsEmpty())
-	assert.Equal(t, 0, s.Size())
+	assert.True(t, s.IsEmpty(), "New set should be empty")
+	assert.Equal(t, 0, s.Size(), "Empty set size should be 0")
 	_, ok := s.Pop()
-	assert.False(t, ok)
-	assert.True(t, s.Add(1))
-	assert.False(t, s.IsEmpty())
-	assert.Equal(t, 1, s.Size())
-	assert.True(t, s.Contains(1))
+	require.False(t, ok, "Pop should fail on empty set")
+	assert.True(t, s.Add(1), "Add should succeed for new element")
+	assert.False(t, s.IsEmpty(), "Set should not be empty after add")
+	assert.Equal(t, 1, s.Size(), "Size should be 1 after add")
+	assert.True(t, s.Contains(1), "Contains should be true for inserted element")
 }
 
 func TestHashSet_Large(t *testing.T) {
+	t.Parallel()
 	s := NewHashSet[int]()
 	const n = 20000
 	for i := range n {
 		s.Add(i)
 	}
-	assert.Equal(t, n, s.Size())
+	assert.Equal(t, n, s.Size(), "Size should equal number of inserted elements")
 	for _, k := range []int{0, n / 2, n - 1} {
 		require.Truef(t, s.Contains(k), "Missing %d", k)
 	}
 }
 
 func TestHashSet_Clear(t *testing.T) {
+	t.Parallel()
 	s := NewHashSetFrom(1, 2, 3)
-	assert.False(t, s.IsEmpty())
+	assert.False(t, s.IsEmpty(), "Set should start non-empty")
 	s.Clear()
-	assert.True(t, s.IsEmpty())
-	assert.Equal(t, 0, s.Size())
+	assert.True(t, s.IsEmpty(), "Set should be empty after Clear")
+	assert.Equal(t, 0, s.Size(), "Size should be 0 after Clear")
 }
 
 func TestHashSet_ToSlice(t *testing.T) {
+	t.Parallel()
 	s := NewHashSetFrom(5, 3, 1, 4, 2)
 	slice := s.ToSlice()
 	slices.Sort(slice)
-	assert.Equal(t, []int{1, 2, 3, 4, 5}, slice)
+	assert.Equal(t, []int{1, 2, 3, 4, 5}, slice, "ToSlice should contain all elements")
 }
 
 func TestHashSet_Clone(t *testing.T) {
+	t.Parallel()
 	s := NewHashSetFrom(1, 2, 3)
 	clone := s.Clone()
 	clone.Remove(1)
-	assert.True(t, s.Contains(1))
-	assert.Equal(t, 3, s.Size())
-	assert.Equal(t, 2, clone.Size())
+	assert.True(t, s.Contains(1), "Original set should be unchanged")
+	assert.Equal(t, 3, s.Size(), "Original size should remain 3")
+	assert.Equal(t, 2, clone.Size(), "Clone size should reflect removal")
 }
 
 func TestHashSet_Filter(t *testing.T) {
+	t.Parallel()
 	s := NewHashSetFrom(1, 2, 3, 4, 5, 6)
 	filtered := s.Filter(func(v int) bool { return v%2 == 0 })
-	assert.Equal(t, 3, filtered.Size())
-	assert.True(t, filtered.Contains(2))
-	assert.True(t, filtered.Contains(4))
-	assert.True(t, filtered.Contains(6))
+	assert.Equal(t, 3, filtered.Size(), "Filter should keep three evens")
+	assert.True(t, filtered.Contains(2), "Filtered set should contain 2")
+	assert.True(t, filtered.Contains(4), "Filtered set should contain 4")
+	assert.True(t, filtered.Contains(6), "Filtered set should contain 6")
 }
 
 func TestHashSet_ContainsAllAny(t *testing.T) {
+	t.Parallel()
 	s := NewHashSetFrom(1, 2, 3, 4, 5)
-	assert.True(t, s.ContainsAll(1, 3, 5))
-	assert.False(t, s.ContainsAll(1, 6))
-	assert.True(t, s.ContainsAny(1, 10, 20))
-	assert.False(t, s.ContainsAny(10, 20, 30))
+	assert.True(t, s.ContainsAll(1, 3, 5), "ContainsAll should be true for present elements")
+	assert.False(t, s.ContainsAll(1, 6), "ContainsAll should be false if any missing")
+	assert.True(t, s.ContainsAny(1, 10, 20), "ContainsAny should be true if at least one present")
+	assert.False(t, s.ContainsAny(10, 20, 30), "ContainsAny should be false if none present")
 }
 
 func TestHashSet_NewWithCapacity(t *testing.T) {
+	t.Parallel()
 	s := NewHashSetWithCapacity[int](10)
-	require.True(t, s.IsEmpty())
+	require.True(t, s.IsEmpty(), "New set with capacity should be empty")
 	s.Add(1)
-	require.Equal(t, 1, s.Size())
+	require.Equal(t, 1, s.Size(), "Size should be 1 after add")
+}
+
+func TestHashSet_WithCapacityZero(t *testing.T) {
+	t.Parallel()
+	s := NewHashSetWithCapacity[int](0)
+	require.True(t, s.IsEmpty(), "Set with zero capacity should be empty")
+	s.Add(1)
+	require.Equal(t, 1, s.Size(), "Size should be 1 after add")
+}
+
+func TestHashSet_WithCapacityNegative(t *testing.T) {
+	t.Parallel()
+	s := NewHashSetWithCapacity[int](-5)
+	require.True(t, s.IsEmpty(), "Set with negative capacity should be empty")
+	s.Add(42)
+	require.Equal(t, 1, s.Size(), "Size should be 1 after add")
+}
+
+func TestHashSet_FindEmpty(t *testing.T) {
+	t.Parallel()
+	s := NewHashSet[int]()
+	_, ok := s.Find(func(x int) bool { return x > 0 })
+	require.False(t, ok, "Find on empty set should return false")
+}
+
+func TestHashSet_FindNotFound(t *testing.T) {
+	t.Parallel()
+	s := NewHashSetFrom(1, 2, 3)
+	_, ok := s.Find(func(x int) bool { return x > 100 })
+	require.False(t, ok, "Find should return false when no element satisfies predicate")
 }
 
 func TestHashSet_String(t *testing.T) {
+	t.Parallel()
 	s := NewHashSet[int]()
 	s.Add(1)
 	str := s.String()
-	require.Contains(t, str, "hashSet")
-	require.Contains(t, str, "1")
+	require.Contains(t, str, "hashSet", "String should include type name")
+	require.Contains(t, str, "1", "String should include element value")
 }
