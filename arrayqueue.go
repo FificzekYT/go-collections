@@ -1,6 +1,9 @@
 package collections
 
 import (
+	"bytes"
+	"encoding/gob"
+	"encoding/json"
 	"iter"
 	"slices"
 )
@@ -129,6 +132,50 @@ func (q *arrayQueue[T]) compact() {
 	copy(q.data[:live], q.data[q.head:])
 	q.data = q.data[:live]
 	q.head = 0
+}
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes from front to back as a JSON array.
+func (q *arrayQueue[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(q.ToSlice())
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Deserializes from a JSON array.
+func (q *arrayQueue[T]) UnmarshalJSON(data []byte) error {
+	var slice []T
+	if err := json.Unmarshal(data, &slice); err != nil {
+		return err
+	}
+	q.data = slice
+	q.head = 0
+	return nil
+}
+
+// GobEncode implements gob.GobEncoder.
+func (q *arrayQueue[T]) GobEncode() ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(q.ToSlice()); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+func (q *arrayQueue[T]) GobDecode(data []byte) error {
+	var slice []T
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	if err := dec.Decode(&slice); err != nil {
+		return err
+	}
+	q.data = slice
+	q.head = 0
+	return nil
 }
 
 // Compile-time conformance

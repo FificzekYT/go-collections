@@ -1,6 +1,9 @@
 package collections
 
 import (
+	"bytes"
+	"encoding/gob"
+	"encoding/json"
 	"iter"
 	"maps"
 	"slices"
@@ -356,6 +359,54 @@ func (s *hashSet[T]) Every(predicate func(element T) bool) bool {
 		}
 	}
 	return true
+}
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes the set as a JSON array.
+func (s *hashSet[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.ToSlice())
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Deserializes from a JSON array.
+func (s *hashSet[T]) UnmarshalJSON(data []byte) error {
+	var slice []T
+	if err := json.Unmarshal(data, &slice); err != nil {
+		return err
+	}
+	s.m = make(map[T]struct{}, len(slice))
+	for _, elem := range slice {
+		s.m[elem] = struct{}{}
+	}
+	return nil
+}
+
+// GobEncode implements gob.GobEncoder.
+func (s *hashSet[T]) GobEncode() ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(s.ToSlice()); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+func (s *hashSet[T]) GobDecode(data []byte) error {
+	var slice []T
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	if err := dec.Decode(&slice); err != nil {
+		return err
+	}
+	s.m = make(map[T]struct{}, len(slice))
+	for _, elem := range slice {
+		s.m[elem] = struct{}{}
+	}
+	return nil
 }
 
 // Compile-time conformance checks (spot-check with concrete instantiation).

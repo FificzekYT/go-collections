@@ -1,6 +1,9 @@
 package collections
 
 import (
+	"bytes"
+	"encoding/gob"
+	"encoding/json"
 	"iter"
 	"slices"
 )
@@ -313,6 +316,38 @@ func (l *arrayList[T]) Every(predicate func(element T) bool) bool {
 		}
 	}
 	return true
+}
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes the list as a JSON array in order.
+func (l *arrayList[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(l.data)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Deserializes from a JSON array.
+func (l *arrayList[T]) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &l.data)
+}
+
+// GobEncode implements gob.GobEncoder.
+func (l *arrayList[T]) GobEncode() ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(l.data); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+func (l *arrayList[T]) GobDecode(data []byte) error {
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	return dec.Decode(&l.data)
 }
 
 // Compile-time conformance

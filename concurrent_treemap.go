@@ -1,7 +1,11 @@
 package collections
 
 import (
+	"bytes"
 	"cmp"
+	"encoding/gob"
+	"encoding/json"
+	"fmt"
 	"iter"
 	"slices"
 	"sync"
@@ -654,6 +658,72 @@ func (c *concurrentTreeMap[K, V]) CloneSorted() SortedMap[K, V] {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.tm.CloneSorted()
+}
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes entries in ascending key order.
+//
+// NOTE: The comparator is NOT serialized. When deserializing, use:
+//   - UnmarshalTreeMapOrderedJSON[K, V](data) for Ordered key types
+//   - UnmarshalTreeMapJSON[K, V](data, comparator) for custom comparators
+func (c *concurrentTreeMap[K, V]) MarshalJSON() ([]byte, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	wrapped := serializableMap[K, V]{
+		Entries: make([]serializableEntry[K, V], 0, c.tm.Size()),
+	}
+	for k, v := range c.tm.Seq() {
+		wrapped.Entries = append(wrapped.Entries, serializableEntry[K, V]{
+			Key:   k,
+			Value: v,
+		})
+	}
+	return json.Marshal(wrapped)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Returns an error because ConcurrentTreeMap requires a comparator.
+// Use UnmarshalTreeMapOrderedJSON or UnmarshalTreeMapJSON instead.
+func (c *concurrentTreeMap[K, V]) UnmarshalJSON(data []byte) error {
+	return fmt.Errorf("cannot unmarshal ConcurrentTreeMap directly: use UnmarshalTreeMapOrderedJSON[K, V]() for Ordered key types or UnmarshalTreeMapJSON[K, V](data, comparator) for custom comparators, then wrap with NewConcurrentTreeMap")
+}
+
+// GobEncode implements gob.GobEncoder.
+// Serializes entries in ascending key order.
+//
+// NOTE: The comparator is NOT serialized. When deserializing, use:
+//   - UnmarshalTreeMapOrderedGob[K, V](data) for Ordered key types
+//   - UnmarshalTreeMapGob[K, V](data, comparator) for custom comparators
+func (c *concurrentTreeMap[K, V]) GobEncode() ([]byte, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	entries := make([]serializableEntry[K, V], 0, c.tm.Size())
+	for k, v := range c.tm.Seq() {
+		entries = append(entries, serializableEntry[K, V]{
+			Key:   k,
+			Value: v,
+		})
+	}
+
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(entries); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+// Returns an error because ConcurrentTreeMap requires a comparator.
+// Use UnmarshalTreeMapOrderedGob or UnmarshalTreeMapGob instead.
+func (c *concurrentTreeMap[K, V]) GobDecode(data []byte) error {
+	return fmt.Errorf("cannot unmarshal ConcurrentTreeMap directly: use UnmarshalTreeMapOrderedGob[K, V]() for Ordered key types or UnmarshalTreeMapGob[K, V](data, comparator) for custom comparators, then wrap with NewConcurrentTreeMap")
 }
 
 // Conformance

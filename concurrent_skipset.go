@@ -1,6 +1,9 @@
 package collections
 
 import (
+	"bytes"
+	"encoding/gob"
+	"encoding/json"
 	"iter"
 	"slices"
 
@@ -637,6 +640,59 @@ func (c *concurrentSkipSet[T]) CloneSorted() SortedSet[T] {
 	out := NewTreeSetOrdered[T]()
 	c.s.Range(func(v T) bool { out.Add(v); return true })
 	return out
+}
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes elements in ascending order as a JSON array.
+// NOTE: ConcurrentSkipSet only supports Ordered types, so deserialization
+// can be done directly without providing a comparator.
+func (c *concurrentSkipSet[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.ToSlice())
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Deserializes from a JSON array.
+// Since ConcurrentSkipSet only supports Ordered types, no comparator is needed.
+func (c *concurrentSkipSet[T]) UnmarshalJSON(data []byte) error {
+	var slice []T
+	if err := json.Unmarshal(data, &slice); err != nil {
+		return err
+	}
+	c.s = skipset.New[T]()
+	for _, elem := range slice {
+		c.s.Add(elem)
+	}
+	return nil
+}
+
+// GobEncode implements gob.GobEncoder.
+// Serializes elements in ascending order.
+func (c *concurrentSkipSet[T]) GobEncode() ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(c.ToSlice()); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+// Deserializes from gob data.
+func (c *concurrentSkipSet[T]) GobDecode(data []byte) error {
+	var slice []T
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	if err := dec.Decode(&slice); err != nil {
+		return err
+	}
+	c.s = skipset.New[T]()
+	for _, elem := range slice {
+		c.s.Add(elem)
+	}
+	return nil
 }
 
 // Conformance

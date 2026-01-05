@@ -1,6 +1,9 @@
 package collections
 
 import (
+	"bytes"
+	"encoding/gob"
+	"encoding/json"
 	"iter"
 	"slices"
 
@@ -728,6 +731,77 @@ func (c *concurrentSkipMap[K, V]) CloneSorted() SortedMap[K, V] {
 	out := NewTreeMapOrdered[K, V]()
 	c.m.Range(func(k K, v V) bool { out.Put(k, v); return true })
 	return out
+}
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes entries in ascending key order.
+// NOTE: ConcurrentSkipMap only supports Ordered key types, so deserialization
+// can be done directly without providing a comparator.
+func (c *concurrentSkipMap[K, V]) MarshalJSON() ([]byte, error) {
+	wrapped := serializableMap[K, V]{
+		Entries: make([]serializableEntry[K, V], 0),
+	}
+	c.m.Range(func(k K, v V) bool {
+		wrapped.Entries = append(wrapped.Entries, serializableEntry[K, V]{
+			Key:   k,
+			Value: v,
+		})
+		return true
+	})
+	return json.Marshal(wrapped)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Deserializes from a JSON object.
+// Since ConcurrentSkipMap only supports Ordered key types, no comparator is needed.
+func (c *concurrentSkipMap[K, V]) UnmarshalJSON(data []byte) error {
+	var wrapped serializableMap[K, V]
+	if err := json.Unmarshal(data, &wrapped); err != nil {
+		return err
+	}
+	c.m = skipmap.New[K, V]()
+	for _, entry := range wrapped.Entries {
+		c.m.Store(entry.Key, entry.Value)
+	}
+	return nil
+}
+
+// GobEncode implements gob.GobEncoder.
+// Serializes entries in ascending key order.
+func (c *concurrentSkipMap[K, V]) GobEncode() ([]byte, error) {
+	entries := make([]serializableEntry[K, V], 0)
+	c.m.Range(func(k K, v V) bool {
+		entries = append(entries, serializableEntry[K, V]{
+			Key:   k,
+			Value: v,
+		})
+		return true
+	})
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(entries); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+// Deserializes from gob data.
+func (c *concurrentSkipMap[K, V]) GobDecode(data []byte) error {
+	var entries []serializableEntry[K, V]
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	if err := dec.Decode(&entries); err != nil {
+		return err
+	}
+	c.m = skipmap.New[K, V]()
+	for _, entry := range entries {
+		c.m.Store(entry.Key, entry.Value)
+	}
+	return nil
 }
 
 // Conformance

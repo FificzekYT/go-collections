@@ -1,6 +1,9 @@
 package collections
 
 import (
+	"bytes"
+	"encoding/gob"
+	"encoding/json"
 	"iter"
 )
 
@@ -477,6 +480,62 @@ func (l *linkedList[T]) Every(predicate func(element T) bool) bool {
 		}
 	}
 	return true
+}
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes the list as a JSON array in order.
+func (l *linkedList[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(l.ToSlice())
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Deserializes from a JSON array.
+func (l *linkedList[T]) UnmarshalJSON(data []byte) error {
+	var slice []T
+	if err := json.Unmarshal(data, &slice); err != nil {
+		return err
+	}
+	// Clear existing list
+	l.head = nil
+	l.tail = nil
+	l.size = 0
+	// Add all elements
+	for _, elem := range slice {
+		l.Add(elem)
+	}
+	return nil
+}
+
+// GobEncode implements gob.GobEncoder.
+func (l *linkedList[T]) GobEncode() ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(l.ToSlice()); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+func (l *linkedList[T]) GobDecode(data []byte) error {
+	var slice []T
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	if err := dec.Decode(&slice); err != nil {
+		return err
+	}
+	// Clear existing list
+	l.head = nil
+	l.tail = nil
+	l.size = 0
+	// Add all elements
+	for _, elem := range slice {
+		l.Add(elem)
+	}
+	return nil
 }
 
 // Compile-time conformance

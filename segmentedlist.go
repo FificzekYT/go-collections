@@ -1,6 +1,9 @@
 package collections
 
 import (
+	"bytes"
+	"encoding/gob"
+	"encoding/json"
 	"iter"
 	"slices"
 	"sync"
@@ -669,6 +672,64 @@ func (l *segmentedList[T]) Every(predicate func(element T) bool) bool {
 		seg.mu.RUnlock()
 	}
 	return true
+}
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes a snapshot of the list as a JSON array.
+// NOTE: Provides snapshot consistency - the serialized data represents
+// a consistent view but may be slightly stale.
+func (l *segmentedList[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(l.ToSlice())
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Deserializes from a JSON array.
+func (l *segmentedList[T]) UnmarshalJSON(data []byte) error {
+	var slice []T
+	if err := json.Unmarshal(data, &slice); err != nil {
+		return err
+	}
+	// Clear and rebuild without copying locks
+	newList := NewSegmentedList[T]().(*segmentedList[T])
+	for _, elem := range slice {
+		newList.Add(elem)
+	}
+	l.segments = newList.segments
+	l.segmentCount = newList.segmentCount
+	return nil
+}
+
+// GobEncode implements gob.GobEncoder.
+// Serializes a snapshot of the list.
+func (l *segmentedList[T]) GobEncode() ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(l.ToSlice()); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+// Deserializes from gob data.
+func (l *segmentedList[T]) GobDecode(data []byte) error {
+	var slice []T
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	if err := dec.Decode(&slice); err != nil {
+		return err
+	}
+	// Clear and rebuild without copying locks
+	newList := NewSegmentedList[T]().(*segmentedList[T])
+	for _, elem := range slice {
+		newList.Add(elem)
+	}
+	l.segments = newList.segments
+	l.segmentCount = newList.segmentCount
+	return nil
 }
 
 // Compile-time conformance

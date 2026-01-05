@@ -1,6 +1,11 @@
 package collections
 
-import "iter"
+import (
+	"bytes"
+	"encoding/gob"
+	"encoding/json"
+	"iter"
+)
 
 // arrayDeque is a double-ended queue implemented as a circular buffer.
 // Push/Pop at both ends are O(1) amortized; grows by doubling when full.
@@ -187,6 +192,58 @@ func (d *arrayDeque[T]) mod(n, m int) int {
 // We double the buffer capacity when full (geometric growth by 2x). This keeps amortized
 // PushFront/PushBack at O(1) and reduces the number of resizes for long-lived deques.
 // The copy during growth preserves logical order (front..back) in the new buffer.
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes from front to back as a JSON array.
+func (d *arrayDeque[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.ToSlice())
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Deserializes from a JSON array.
+func (d *arrayDeque[T]) UnmarshalJSON(data []byte) error {
+	var slice []T
+	if err := json.Unmarshal(data, &slice); err != nil {
+		return err
+	}
+	// Rebuild deque
+	d.buf = make([]T, len(slice))
+	copy(d.buf, slice)
+	d.head = 0
+	d.tail = len(slice)
+	d.size = len(slice)
+	return nil
+}
+
+// GobEncode implements gob.GobEncoder.
+func (d *arrayDeque[T]) GobEncode() ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(d.ToSlice()); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+func (d *arrayDeque[T]) GobDecode(data []byte) error {
+	var slice []T
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	if err := dec.Decode(&slice); err != nil {
+		return err
+	}
+	// Rebuild deque
+	d.buf = make([]T, len(slice))
+	copy(d.buf, slice)
+	d.head = 0
+	d.tail = len(slice)
+	d.size = len(slice)
+	return nil
+}
 
 // Compile-time conformance
 var (

@@ -1,6 +1,9 @@
 package collections
 
 import (
+	"bytes"
+	"encoding/gob"
+	"encoding/json"
 	"iter"
 
 	xsync "github.com/puzpuzpuz/xsync/v3"
@@ -438,6 +441,70 @@ func (m *concurrentHashMap[K, V]) CompareAndDelete(key K, value V, eq Equaler[V]
 		return prev, false
 	})
 	return deleted
+}
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes a snapshot of the map as a JSON object.
+// NOTE: Provides snapshot consistency - concurrent modifications
+// during serialization may not be reflected.
+func (m *concurrentHashMap[K, V]) MarshalJSON() ([]byte, error) {
+	// Build a standard Go map from the concurrent map
+	snapshot := make(map[K]V)
+	m.m.Range(func(key K, value V) bool {
+		snapshot[key] = value
+		return true
+	})
+	return json.Marshal(snapshot)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Deserializes from a JSON object.
+func (m *concurrentHashMap[K, V]) UnmarshalJSON(data []byte) error {
+	var snapshot map[K]V
+	if err := json.Unmarshal(data, &snapshot); err != nil {
+		return err
+	}
+	m.m = xsync.NewMapOf[K, V]()
+	for key, value := range snapshot {
+		m.m.Store(key, value)
+	}
+	return nil
+}
+
+// GobEncode implements gob.GobEncoder.
+// Serializes a snapshot of the map.
+func (m *concurrentHashMap[K, V]) GobEncode() ([]byte, error) {
+	snapshot := make(map[K]V)
+	m.m.Range(func(key K, value V) bool {
+		snapshot[key] = value
+		return true
+	})
+
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(snapshot); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+// Deserializes from gob data.
+func (m *concurrentHashMap[K, V]) GobDecode(data []byte) error {
+	var snapshot map[K]V
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	if err := dec.Decode(&snapshot); err != nil {
+		return err
+	}
+	m.m = xsync.NewMapOf[K, V]()
+	for key, value := range snapshot {
+		m.m.Store(key, value)
+	}
+	return nil
 }
 
 // Conformance

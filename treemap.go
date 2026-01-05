@@ -1,7 +1,11 @@
 package collections
 
 import (
+	"bytes"
 	"cmp"
+	"encoding/gob"
+	"encoding/json"
+	"fmt"
 	"iter"
 
 	"github.com/tidwall/btree"
@@ -674,6 +678,68 @@ func (t *treeMap[K, V]) CloneSorted() SortedMap[K, V] {
 		return true
 	})
 	return out
+}
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes entries in ascending key order as a JSON object with "entries" array.
+//
+// NOTE: The comparator is NOT serialized. When deserializing, use:
+//   - UnmarshalTreeMapOrderedJSON[K, V](data) for Ordered key types
+//   - UnmarshalTreeMapJSON[K, V](data, comparator) for custom comparators
+func (t *treeMap[K, V]) MarshalJSON() ([]byte, error) {
+	wrapped := serializableMap[K, V]{
+		Entries: make([]serializableEntry[K, V], 0, t.bt.Len()),
+	}
+	t.bt.Scan(func(me mapEntry[K, V]) bool {
+		wrapped.Entries = append(wrapped.Entries, serializableEntry[K, V]{
+			Key:   me.key,
+			Value: me.value,
+		})
+		return true
+	})
+	return json.Marshal(wrapped)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Returns an error because TreeMap requires a comparator.
+// Use UnmarshalTreeMapOrderedJSON or UnmarshalTreeMapJSON instead.
+func (t *treeMap[K, V]) UnmarshalJSON(data []byte) error {
+	return fmt.Errorf("cannot unmarshal TreeMap directly: use UnmarshalTreeMapOrderedJSON[K, V]() for Ordered key types or UnmarshalTreeMapJSON[K, V](data, comparator) for custom comparators")
+}
+
+// GobEncode implements gob.GobEncoder.
+// Serializes entries in ascending key order.
+//
+// NOTE: The comparator is NOT serialized. When deserializing, use:
+//   - UnmarshalTreeMapOrderedGob[K, V](data) for Ordered key types
+//   - UnmarshalTreeMapGob[K, V](data, comparator) for custom comparators
+func (t *treeMap[K, V]) GobEncode() ([]byte, error) {
+	entries := make([]serializableEntry[K, V], 0, t.bt.Len())
+	t.bt.Scan(func(me mapEntry[K, V]) bool {
+		entries = append(entries, serializableEntry[K, V]{
+			Key:   me.key,
+			Value: me.value,
+		})
+		return true
+	})
+
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(entries); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+// Returns an error because TreeMap requires a comparator.
+// Use UnmarshalTreeMapOrderedGob or UnmarshalTreeMapGob instead.
+func (t *treeMap[K, V]) GobDecode(data []byte) error {
+	return fmt.Errorf("cannot unmarshal TreeMap directly: use UnmarshalTreeMapOrderedGob[K, V]() for Ordered key types or UnmarshalTreeMapGob[K, V](data, comparator) for custom comparators")
 }
 
 // Compile-time conformance check.

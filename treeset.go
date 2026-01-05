@@ -1,7 +1,11 @@
 package collections
 
 import (
+	"bytes"
 	"cmp"
+	"encoding/gob"
+	"encoding/json"
+	"fmt"
 	"iter"
 
 	"github.com/tidwall/btree"
@@ -600,6 +604,49 @@ func (t *treeSet[T]) CloneSorted() SortedSet[T] {
 		return true
 	})
 	return out
+}
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes elements in ascending order as a JSON array.
+//
+// NOTE: The comparator is NOT serialized. When deserializing, use:
+//   - UnmarshalTreeSetOrderedJSON[T](data) for Ordered types
+//   - UnmarshalTreeSetJSON[T](data, comparator) for custom comparators
+func (t *treeSet[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.ToSlice())
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Returns an error because TreeSet requires a comparator.
+// Use UnmarshalTreeSetOrderedJSON or UnmarshalTreeSetJSON instead.
+func (t *treeSet[T]) UnmarshalJSON(data []byte) error {
+	return fmt.Errorf("cannot unmarshal TreeSet directly: use UnmarshalTreeSetOrderedJSON[T]() for Ordered types or UnmarshalTreeSetJSON[T](data, comparator) for custom comparators")
+}
+
+// GobEncode implements gob.GobEncoder.
+// Serializes elements in ascending order.
+//
+// NOTE: The comparator is NOT serialized. When deserializing, use:
+//   - UnmarshalTreeSetOrderedGob[T](data) for Ordered types
+//   - UnmarshalTreeSetGob[T](data, comparator) for custom comparators
+func (t *treeSet[T]) GobEncode() ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(t.ToSlice()); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+// Returns an error because TreeSet requires a comparator.
+// Use UnmarshalTreeSetOrderedGob or UnmarshalTreeSetGob instead.
+func (t *treeSet[T]) GobDecode(data []byte) error {
+	return fmt.Errorf("cannot unmarshal TreeSet directly: use UnmarshalTreeSetOrderedGob[T]() for Ordered types or UnmarshalTreeSetGob[T](data, comparator) for custom comparators")
 }
 
 // Compile-time conformance check.

@@ -1,6 +1,9 @@
 package collections
 
 import (
+	"bytes"
+	"encoding/gob"
+	"encoding/json"
 	"iter"
 	"slices"
 	"sync"
@@ -427,6 +430,52 @@ func (l *cowList[T]) Every(predicate func(element T) bool) bool {
 		}
 	}
 	return true
+}
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes a snapshot of the list as a JSON array.
+func (l *cowList[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(l.snapshot())
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Deserializes from a JSON array.
+func (l *cowList[T]) UnmarshalJSON(data []byte) error {
+	var slice []T
+	if err := json.Unmarshal(data, &slice); err != nil {
+		return err
+	}
+	// Replace the atomic pointer data
+	l.data.Store(&slice)
+	return nil
+}
+
+// GobEncode implements gob.GobEncoder.
+// Serializes a snapshot of the list.
+func (l *cowList[T]) GobEncode() ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(l.snapshot()); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+// Deserializes from gob data.
+func (l *cowList[T]) GobDecode(data []byte) error {
+	var slice []T
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	if err := dec.Decode(&slice); err != nil {
+		return err
+	}
+	// Replace the atomic pointer data
+	l.data.Store(&slice)
+	return nil
 }
 
 // Compile-time conformance

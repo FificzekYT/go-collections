@@ -1,6 +1,9 @@
 package collections
 
 import (
+	"bytes"
+	"encoding/gob"
+	"encoding/json"
 	"iter"
 	"slices"
 )
@@ -93,6 +96,38 @@ func (s *arrayStack[T]) Seq() iter.Seq[T] {
 			}
 		}
 	}
+}
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes from bottom to top as a JSON array.
+func (s *arrayStack[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.data)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Deserializes from a JSON array.
+func (s *arrayStack[T]) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &s.data)
+}
+
+// GobEncode implements gob.GobEncoder.
+func (s *arrayStack[T]) GobEncode() ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(s.data); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+func (s *arrayStack[T]) GobDecode(data []byte) error {
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	return dec.Decode(&s.data)
 }
 
 // Compile-time conformance

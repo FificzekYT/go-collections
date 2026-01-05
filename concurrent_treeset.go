@@ -1,7 +1,11 @@
 package collections
 
 import (
+	"bytes"
 	"cmp"
+	"encoding/gob"
+	"encoding/json"
+	"fmt"
 	"iter"
 	"slices"
 	"sync"
@@ -599,6 +603,54 @@ func (c *concurrentTreeSet[T]) CloneSorted() SortedSet[T] {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.tree.CloneSorted()
+}
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes elements in ascending order as a JSON array.
+//
+// NOTE: The comparator is NOT serialized. When deserializing, use:
+//   - UnmarshalTreeSetOrderedJSON[T](data) for Ordered types
+//   - UnmarshalTreeSetJSON[T](data, comparator) for custom comparators
+func (c *concurrentTreeSet[T]) MarshalJSON() ([]byte, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return json.Marshal(c.tree.ToSlice())
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Returns an error because ConcurrentTreeSet requires a comparator.
+// Use UnmarshalTreeSetOrderedJSON or UnmarshalTreeSetJSON instead.
+func (c *concurrentTreeSet[T]) UnmarshalJSON(data []byte) error {
+	return fmt.Errorf("cannot unmarshal ConcurrentTreeSet directly: use UnmarshalTreeSetOrderedJSON[T]() for Ordered types or UnmarshalTreeSetJSON[T](data, comparator) for custom comparators, then wrap with NewConcurrentTreeSet")
+}
+
+// GobEncode implements gob.GobEncoder.
+// Serializes elements in ascending order.
+//
+// NOTE: The comparator is NOT serialized. When deserializing, use:
+//   - UnmarshalTreeSetOrderedGob[T](data) for Ordered types
+//   - UnmarshalTreeSetGob[T](data, comparator) for custom comparators
+func (c *concurrentTreeSet[T]) GobEncode() ([]byte, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(c.tree.ToSlice()); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+// Returns an error because ConcurrentTreeSet requires a comparator.
+// Use UnmarshalTreeSetOrderedGob or UnmarshalTreeSetGob instead.
+func (c *concurrentTreeSet[T]) GobDecode(data []byte) error {
+	return fmt.Errorf("cannot unmarshal ConcurrentTreeSet directly: use UnmarshalTreeSetOrderedGob[T]() for Ordered types or UnmarshalTreeSetGob[T](data, comparator) for custom comparators, then wrap with NewConcurrentTreeSet")
 }
 
 // Conformance

@@ -1,7 +1,11 @@
 package collections
 
 import (
+	"bytes"
 	"container/heap"
+	"encoding/gob"
+	"encoding/json"
+	"fmt"
 	"iter"
 	"slices"
 )
@@ -162,6 +166,49 @@ func (pq *priorityQueue[T]) ToSortedSlice() []T {
 // Seq returns a sequence in heap order (not sorted).
 func (pq *priorityQueue[T]) Seq() iter.Seq[T] {
 	return slices.Values(pq.data)
+}
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes elements in heap order (not sorted).
+//
+// NOTE: The comparator is NOT serialized. When deserializing, use:
+//   - UnmarshalPriorityQueueOrderedJSON[T](data) for Ordered types
+//   - UnmarshalPriorityQueueJSON[T](data, comparator) for custom comparators
+func (pq *priorityQueue[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(pq.data)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Returns an error because PriorityQueue requires a comparator.
+// Use UnmarshalPriorityQueueOrderedJSON or UnmarshalPriorityQueueJSON instead.
+func (pq *priorityQueue[T]) UnmarshalJSON(data []byte) error {
+	return fmt.Errorf("cannot unmarshal PriorityQueue directly: use UnmarshalPriorityQueueOrderedJSON[T]() for Ordered types or UnmarshalPriorityQueueJSON[T](data, comparator) for custom comparators")
+}
+
+// GobEncode implements gob.GobEncoder.
+// Serializes elements in heap order (not sorted).
+//
+// NOTE: The comparator is NOT serialized. When deserializing, use:
+//   - UnmarshalPriorityQueueOrderedGob[T](data) for Ordered types
+//   - UnmarshalPriorityQueueGob[T](data, comparator) for custom comparators
+func (pq *priorityQueue[T]) GobEncode() ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(pq.data); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+// Returns an error because PriorityQueue requires a comparator.
+// Use UnmarshalPriorityQueueOrderedGob or UnmarshalPriorityQueueGob instead.
+func (pq *priorityQueue[T]) GobDecode(data []byte) error {
+	return fmt.Errorf("cannot unmarshal PriorityQueue directly: use UnmarshalPriorityQueueOrderedGob[T]() for Ordered types or UnmarshalPriorityQueueGob[T](data, comparator) for custom comparators")
 }
 
 // Compile-time conformance

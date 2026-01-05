@@ -1,6 +1,9 @@
 package collections
 
 import (
+	"bytes"
+	"encoding/gob"
+	"encoding/json"
 	"iter"
 
 	xsync "github.com/puzpuzpuz/xsync/v3"
@@ -399,6 +402,58 @@ func (s *concurrentHashSet[T]) RemoveAndGet(element T) (T, bool) {
 	}
 	var zero T
 	return zero, false
+}
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes a snapshot of the set as a JSON array.
+// NOTE: Provides snapshot consistency - concurrent modifications
+// during serialization may not be reflected.
+func (s *concurrentHashSet[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.ToSlice())
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Deserializes from a JSON array.
+func (s *concurrentHashSet[T]) UnmarshalJSON(data []byte) error {
+	var slice []T
+	if err := json.Unmarshal(data, &slice); err != nil {
+		return err
+	}
+	s.m = xsync.NewMapOf[T, struct{}]()
+	for _, elem := range slice {
+		s.m.Store(elem, struct{}{})
+	}
+	return nil
+}
+
+// GobEncode implements gob.GobEncoder.
+// Serializes a snapshot of the set.
+func (s *concurrentHashSet[T]) GobEncode() ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(s.ToSlice()); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+// Deserializes from gob data.
+func (s *concurrentHashSet[T]) GobDecode(data []byte) error {
+	var slice []T
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	if err := dec.Decode(&slice); err != nil {
+		return err
+	}
+	s.m = xsync.NewMapOf[T, struct{}]()
+	for _, elem := range slice {
+		s.m.Store(elem, struct{}{})
+	}
+	return nil
 }
 
 // Conformance

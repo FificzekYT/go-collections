@@ -1,6 +1,9 @@
 package collections
 
 import (
+	"bytes"
+	"encoding/gob"
+	"encoding/json"
 	"iter"
 	"maps"
 	"slices"
@@ -328,6 +331,39 @@ func (h *hashMap[K, V]) Equals(other Map[K, V], valueEq Equaler[V]) bool {
 		}
 	}
 	return true
+}
+
+// ==========================
+// Serialization
+// ==========================
+
+// MarshalJSON implements json.Marshaler.
+// Serializes the map as a JSON object (keys must be string-convertible) or array of entries.
+func (h *hashMap[K, V]) MarshalJSON() ([]byte, error) {
+	// Serialize as a standard Go map since K is comparable
+	return json.Marshal(h.m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Deserializes from a JSON object.
+func (h *hashMap[K, V]) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &h.m)
+}
+
+// GobEncode implements gob.GobEncoder.
+func (h *hashMap[K, V]) GobEncode() ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(h.m); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// GobDecode implements gob.GobDecoder.
+func (h *hashMap[K, V]) GobDecode(data []byte) error {
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	return dec.Decode(&h.m)
 }
 
 // Compile-time conformance checks with concrete instantiation.
