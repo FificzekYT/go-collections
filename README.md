@@ -52,12 +52,14 @@ Generic, fast, and ergonomic collections for Go 1.25+. This library provides a c
 ## Features
 
 - **Type-Safe Generics**: All collections are fully generic with compile-time type safety
+- **Type-Safe Generics**: All collections are fully generic with compile-time type safety
 - **Interface Segregation**: Small, focused interfaces composed into higher-level ones
 - **Go 1.25+ Iteration**: Native support for `iter.Seq` and `iter.Seq2` for seamless for-range loops
 - **Consistent API**: Uniform naming across Set/Map/List; `(value, ok)` return patterns
 - **Concurrent Variants**: Thread-safe collections with atomic operations
 - **No Reflection**: Zero runtime reflection for maximum performance
 - **Sorted Collections**: B-Tree and Skip List backed sorted sets and maps
+- **Memory Efficient**: Optimized to prevent memory leaks with `slices.Delete` and proper capacity management
 
 ## Requirements
 
@@ -456,12 +458,6 @@ func NewHashMapFrom[K comparable, V any](src map[K]V) Map[K, V]
 **Additional Interface:**
 
 ```go
-// GoMapView provides access to native Go map snapshot
-type GoMapView[K comparable, V any] interface {
-    ToGoMap() map[K]V
-}
-```
-
 **Example:**
 
 ```go
