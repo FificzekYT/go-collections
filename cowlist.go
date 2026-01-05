@@ -291,6 +291,7 @@ func (l *cowList[T]) RemoveFunc(predicate func(element T) bool) int {
 		}
 	}
 	if removed > 0 {
+		newData = slices.Clip(newData)
 		l.data.Store(&newData)
 	}
 	return removed
@@ -312,6 +313,7 @@ func (l *cowList[T]) RetainFunc(predicate func(element T) bool) int {
 		}
 	}
 	if removed > 0 {
+		newData = slices.Clip(newData)
 		l.data.Store(&newData)
 	}
 	return removed
@@ -377,8 +379,8 @@ func (l *cowList[T]) SubList(from, to int) List[T] {
 func (l *cowList[T]) Reversed() iter.Seq[T] {
 	snap := l.snapshot()
 	return func(yield func(T) bool) {
-		for i := len(snap) - 1; i >= 0; i-- {
-			if !yield(snap[i]) {
+		for _, v := range slices.Backward(snap) {
+			if !yield(v) {
 				return
 			}
 		}

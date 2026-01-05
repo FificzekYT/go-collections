@@ -110,7 +110,11 @@ func (l *lockFreeList[T]) Clear() {
 
 // ToSlice returns a snapshot of all elements.
 func (l *lockFreeList[T]) ToSlice() []T {
-	var result []T
+	size := l.Size()
+	if size == 0 {
+		return nil
+	}
+	result := make([]T, 0, size)
 	head := l.head.Load()
 	tail := l.tail.Load()
 
@@ -589,8 +593,8 @@ func (l *lockFreeList[T]) SubList(from, to int) List[T] {
 func (l *lockFreeList[T]) Reversed() iter.Seq[T] {
 	snap := l.ToSlice()
 	return func(yield func(T) bool) {
-		for i := len(snap) - 1; i >= 0; i-- {
-			if !yield(snap[i]) {
+		for _, v := range slices.Backward(snap) {
+			if !yield(v) {
 				return
 			}
 		}
@@ -660,6 +664,9 @@ func (l *lockFreeList[T]) PhysicalDelete() {
 			// Try to unlink
 			pred.next.CompareAndSwap(curr, next)
 			// Return node to pool
+			var zero T
+			curr.value = zero
+			curr.next.Store(nil)
 			l.nodePool.Put(curr)
 		} else {
 			pred = curr

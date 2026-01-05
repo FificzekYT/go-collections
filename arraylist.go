@@ -40,7 +40,10 @@ func (l *arrayList[T]) Size() int { return len(l.data) }
 func (l *arrayList[T]) IsEmpty() bool { return len(l.data) == 0 }
 
 // Clear removes all elements (capacity is retained).
-func (l *arrayList[T]) Clear() { l.data = l.data[:0] }
+func (l *arrayList[T]) Clear() {
+	clear(l.data)
+	l.data = l.data[:0]
+}
 
 // ToSlice returns a snapshot copy of the elements in order.
 func (l *arrayList[T]) ToSlice() []T {
@@ -115,9 +118,7 @@ func (l *arrayList[T]) AddAll(elements ...T) {
 
 // AddSeq appends all elements from the sequence.
 func (l *arrayList[T]) AddSeq(seq iter.Seq[T]) {
-	for v := range seq {
-		l.data = append(l.data, v)
-	}
+	l.data = slices.AppendSeq(l.data, seq)
 }
 
 // Insert inserts the element at index, shifting subsequent elements right.
@@ -126,9 +127,8 @@ func (l *arrayList[T]) Insert(index int, element T) bool {
 	if index < 0 || index > len(l.data) {
 		return false
 	}
-	l.data = append(l.data, element)       // grow by one
-	copy(l.data[index+1:], l.data[index:]) // shift right
-	l.data[index] = element
+	// Use standard library helper which handles growth + shift efficiently.
+	l.data = slices.Insert(l.data, index, element)
 	return true
 }
 
@@ -141,12 +141,8 @@ func (l *arrayList[T]) InsertAll(index int, elements ...T) bool {
 	if n == 0 {
 		return true
 	}
-	oldLen := len(l.data)
-	l.data = append(l.data, elements...)
-	// shift the tail by n
-	copy(l.data[index+n:], l.data[index:oldLen])
-	// copy in new elements
-	copy(l.data[index:index+n], elements)
+	// Prefer slices.Insert to avoid manual double-copies and to keep code concise.
+	l.data = slices.Insert(l.data, index, elements...)
 	return true
 }
 
@@ -158,6 +154,9 @@ func (l *arrayList[T]) RemoveAt(index int) (T, bool) {
 	}
 	removed := l.data[index]
 	copy(l.data[index:], l.data[index+1:])
+	// Clear last element to let GC reclaim referenced objects earlier.
+	var zero T
+	l.data[len(l.data)-1] = zero
 	l.data = l.data[:len(l.data)-1]
 	return removed, true
 }
@@ -189,6 +188,8 @@ func (l *arrayList[T]) RemoveFunc(predicate func(element T) bool) int {
 		l.data[j] = v
 		j++
 	}
+	// Clear the now-dead tail to avoid holding references.
+	clear(l.data[j:oldLen])
 	l.data = l.data[:j]
 	return oldLen - j
 }
@@ -204,6 +205,8 @@ func (l *arrayList[T]) RetainFunc(predicate func(element T) bool) int {
 		l.data[j] = v
 		j++
 	}
+	// Clear the now-dead tail to avoid holding references.
+	clear(l.data[j:oldLen])
 	l.data = l.data[:j]
 	return oldLen - j
 }

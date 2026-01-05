@@ -3,6 +3,7 @@ package collections
 import (
 	"cmp"
 	"iter"
+	"slices"
 	"sync"
 )
 
@@ -168,7 +169,17 @@ func (c *concurrentTreeMap[K, V]) RemoveKeys(keys ...K) int {
 
 // RemoveKeysSeq removes keys from the sequence. Returns count removed.
 func (c *concurrentTreeMap[K, V]) RemoveKeysSeq(seq iter.Seq[K]) int {
-	keys := make([]K, 0, 16)
+	var (
+		keys []K
+		size int
+	)
+	c.mu.RLock()
+	size = c.tm.Size()
+	c.mu.RUnlock()
+	if size == 0 {
+		return 0
+	}
+	keys = make([]K, 0, min(size, 16))
 	for k := range seq {
 		keys = append(keys, k)
 	}
@@ -186,7 +197,11 @@ func (c *concurrentTreeMap[K, V]) RemoveKeysSeq(seq iter.Seq[K]) int {
 // RemoveFunc removes entries where predicate returns true. Returns count removed.
 func (c *concurrentTreeMap[K, V]) RemoveFunc(predicate func(key K, value V) bool) int {
 	ents := c.Entries()
-	dels := make([]K, 0, len(ents)/2)
+	size := len(ents)
+	if size == 0 {
+		return 0
+	}
+	dels := make([]K, 0, size/2)
 	for _, e := range ents {
 		if predicate(e.Key, e.Value) {
 			dels = append(dels, e.Key)
@@ -557,8 +572,8 @@ func (c *concurrentTreeMap[K, V]) Ascend(action func(key K, value V) bool) {
 // Descend iterates all entries in descending key order over snapshot.
 func (c *concurrentTreeMap[K, V]) Descend(action func(key K, value V) bool) {
 	ents := c.Entries()
-	for i := len(ents) - 1; i >= 0; i-- {
-		if !action(ents[i].Key, ents[i].Value) {
+	for _, e := range slices.Backward(ents) {
+		if !action(e.Key, e.Value) {
 			return
 		}
 	}
@@ -578,9 +593,9 @@ func (c *concurrentTreeMap[K, V]) AscendFrom(pivot K, action func(key K, value V
 // DescendFrom iterates entries with keys <= pivot descending (snapshot).
 func (c *concurrentTreeMap[K, V]) DescendFrom(pivot K, action func(key K, value V) bool) {
 	ents := c.Entries()
-	for i := len(ents) - 1; i >= 0; i-- {
-		if c.tm.keyCmp(ents[i].Key, pivot) <= 0 {
-			if !action(ents[i].Key, ents[i].Value) {
+	for _, e := range slices.Backward(ents) {
+		if c.tm.keyCmp(e.Key, pivot) <= 0 {
+			if !action(e.Key, e.Value) {
 				return
 			}
 		}
@@ -591,8 +606,8 @@ func (c *concurrentTreeMap[K, V]) DescendFrom(pivot K, action func(key K, value 
 func (c *concurrentTreeMap[K, V]) Reversed() iter.Seq2[K, V] {
 	return func(yield func(K, V) bool) {
 		ents := c.Entries()
-		for i := len(ents) - 1; i >= 0; i-- {
-			if !yield(ents[i].Key, ents[i].Value) {
+		for _, e := range slices.Backward(ents) {
+			if !yield(e.Key, e.Value) {
 				return
 			}
 		}

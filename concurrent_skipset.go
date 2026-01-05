@@ -123,7 +123,11 @@ func (c *concurrentSkipSet[T]) RemoveSeq(seq iter.Seq[T]) int {
 
 // RemoveFunc removes elements satisfying predicate. Returns count removed.
 func (c *concurrentSkipSet[T]) RemoveFunc(predicate func(element T) bool) int {
-	dels := make([]T, 0, c.Size())
+	size := c.Size()
+	if size == 0 {
+		return 0
+	}
+	dels := make([]T, 0, size/2)
 	c.s.Range(func(v T) bool {
 		if predicate(v) {
 			dels = append(dels, v)
@@ -141,7 +145,11 @@ func (c *concurrentSkipSet[T]) RemoveFunc(predicate func(element T) bool) int {
 
 // RetainFunc keeps only elements satisfying predicate. Returns count removed.
 func (c *concurrentSkipSet[T]) RetainFunc(predicate func(element T) bool) int {
-	dels := make([]T, 0, c.Size())
+	size := c.Size()
+	if size == 0 {
+		return 0
+	}
+	dels := make([]T, 0, size/2)
 	c.s.Range(func(v T) bool {
 		if !predicate(v) {
 			dels = append(dels, v)
@@ -507,8 +515,8 @@ func (c *concurrentSkipSet[T]) Ascend(action func(element T) bool) {
 // Descend iterates all elements in descending order (O(n) snapshot).
 func (c *concurrentSkipSet[T]) Descend(action func(element T) bool) {
 	buf := c.ToSlice()
-	for i := len(buf) - 1; i >= 0; i-- {
-		if !action(buf[i]) {
+	for _, v := range slices.Backward(buf) {
+		if !action(v) {
 			return
 		}
 	}
@@ -527,9 +535,9 @@ func (c *concurrentSkipSet[T]) AscendFrom(pivot T, action func(element T) bool) 
 // DescendFrom iterates elements <= pivot in descending order (O(n) snapshot).
 func (c *concurrentSkipSet[T]) DescendFrom(pivot T, action func(element T) bool) {
 	buf := c.ToSlice()
-	for i := len(buf) - 1; i >= 0; i-- {
-		if buf[i] <= pivot {
-			if !action(buf[i]) {
+	for _, v := range slices.Backward(buf) {
+		if v <= pivot {
+			if !action(v) {
 				return
 			}
 		}
@@ -540,8 +548,8 @@ func (c *concurrentSkipSet[T]) DescendFrom(pivot T, action func(element T) bool)
 func (c *concurrentSkipSet[T]) Reversed() iter.Seq[T] {
 	return func(yield func(T) bool) {
 		buf := c.ToSlice()
-		for i := len(buf) - 1; i >= 0; i-- {
-			if !yield(buf[i]) {
+		for _, v := range slices.Backward(buf) {
+			if !yield(v) {
 				return
 			}
 		}

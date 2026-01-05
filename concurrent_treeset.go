@@ -3,6 +3,7 @@ package collections
 import (
 	"cmp"
 	"iter"
+	"slices"
 	"sync"
 )
 
@@ -113,6 +114,9 @@ func (c *concurrentTreeSet[T]) AddSeq(seq iter.Seq[T]) int {
 	for v := range seq {
 		buf = append(buf, v)
 	}
+	if len(buf) == 0 {
+		return 0
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	added := 0
@@ -144,6 +148,9 @@ func (c *concurrentTreeSet[T]) RemoveSeq(seq iter.Seq[T]) int {
 	for v := range seq {
 		buf = append(buf, v)
 	}
+	if len(buf) == 0 {
+		return 0
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	removed := 0
@@ -161,7 +168,11 @@ func (c *concurrentTreeSet[T]) RemoveFunc(predicate func(element T) bool) int {
 	c.mu.RLock()
 	snap := c.tree.ToSlice()
 	c.mu.RUnlock()
-	dels := make([]T, 0, len(snap)/2)
+	size := len(snap)
+	if size == 0 {
+		return 0
+	}
+	dels := make([]T, 0, size/2)
 	for _, v := range snap {
 		if predicate(v) {
 			dels = append(dels, v)
@@ -183,7 +194,11 @@ func (c *concurrentTreeSet[T]) RetainFunc(predicate func(element T) bool) int {
 	c.mu.RLock()
 	snap := c.tree.ToSlice()
 	c.mu.RUnlock()
-	dels := make([]T, 0, len(snap)/2)
+	size := len(snap)
+	if size == 0 {
+		return 0
+	}
+	dels := make([]T, 0, size/2)
 	for _, v := range snap {
 		if !predicate(v) {
 			dels = append(dels, v)
@@ -501,8 +516,8 @@ func (c *concurrentTreeSet[T]) Ascend(action func(element T) bool) {
 // Descend iterates all elements in descending order over snapshot.
 func (c *concurrentTreeSet[T]) Descend(action func(element T) bool) {
 	snap := c.ToSlice()
-	for i := len(snap) - 1; i >= 0; i-- {
-		if !action(snap[i]) {
+	for _, v := range slices.Backward(snap) {
+		if !action(v) {
 			return
 		}
 	}
@@ -523,9 +538,9 @@ func (c *concurrentTreeSet[T]) AscendFrom(pivot T, action func(element T) bool) 
 // DescendFrom iterates elements <= pivot descending over snapshot.
 func (c *concurrentTreeSet[T]) DescendFrom(pivot T, action func(element T) bool) {
 	snap := c.ToSlice()
-	for i := len(snap) - 1; i >= 0; i-- {
-		if c.tree.cmp(snap[i], pivot) <= 0 {
-			if !action(snap[i]) {
+	for _, v := range slices.Backward(snap) {
+		if c.tree.cmp(v, pivot) <= 0 {
+			if !action(v) {
 				return
 			}
 		}
@@ -536,8 +551,8 @@ func (c *concurrentTreeSet[T]) DescendFrom(pivot T, action func(element T) bool)
 func (c *concurrentTreeSet[T]) Reversed() iter.Seq[T] {
 	return func(yield func(T) bool) {
 		snap := c.ToSlice()
-		for i := len(snap) - 1; i >= 0; i-- {
-			if !yield(snap[i]) {
+		for _, v := range slices.Backward(snap) {
+			if !yield(v) {
 				return
 			}
 		}

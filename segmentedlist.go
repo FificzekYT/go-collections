@@ -42,7 +42,7 @@ func NewSegmentedListWithSegments[T any](segmentCount int) List[T] {
 		segments:     make([]*segment[T], segmentCount),
 		segmentCount: segmentCount,
 	}
-	for i := 0; i < segmentCount; i++ {
+	for i := range segmentCount {
 		l.segments[i] = &segment[T]{data: make([]T, 0)}
 	}
 	return l
@@ -81,7 +81,8 @@ func (l *segmentedList[T]) Clear() {
 
 	for _, seg := range l.segments {
 		seg.mu.Lock()
-		seg.data = make([]T, 0)
+		clear(seg.data)
+		seg.data = seg.data[:0]
 		seg.mu.Unlock()
 	}
 }
@@ -352,7 +353,9 @@ func (l *segmentedList[T]) RemoveAt(index int) (T, bool) {
 	}
 
 	removed := seg.data[localIdx]
+	oldLen := len(seg.data)
 	seg.data = slices.Delete(seg.data, localIdx, localIdx+1)
+	clear(seg.data[len(seg.data):oldLen])
 	return removed, true
 }
 
@@ -365,7 +368,9 @@ func (l *segmentedList[T]) Remove(element T, eq Equaler[T]) bool {
 		seg.mu.Lock()
 		for i, v := range seg.data {
 			if eq(v, element) {
+				oldLen := len(seg.data)
 				seg.data = slices.Delete(seg.data, i, i+1)
+				clear(seg.data[len(seg.data):oldLen])
 				seg.mu.Unlock()
 				return true
 			}
@@ -384,6 +389,9 @@ func (l *segmentedList[T]) RemoveFirst() (T, bool) {
 		seg.mu.Lock()
 		if len(seg.data) > 0 {
 			removed := seg.data[0]
+			// Clear first slot to avoid retaining references.
+			var zero T
+			seg.data[0] = zero
 			seg.data = seg.data[1:]
 			seg.mu.Unlock()
 			return removed, true
@@ -404,6 +412,9 @@ func (l *segmentedList[T]) RemoveLast() (T, bool) {
 		seg.mu.Lock()
 		if len(seg.data) > 0 {
 			removed := seg.data[len(seg.data)-1]
+			// Clear last slot to avoid retaining references.
+			var zero T
+			seg.data[len(seg.data)-1] = zero
 			seg.data = seg.data[:len(seg.data)-1]
 			seg.mu.Unlock()
 			return removed, true
@@ -422,15 +433,18 @@ func (l *segmentedList[T]) RemoveFunc(predicate func(element T) bool) int {
 	removed := 0
 	for _, seg := range l.segments {
 		seg.mu.Lock()
-		newData := make([]T, 0, len(seg.data))
+		// Filter in-place
+		n := 0
 		for _, v := range seg.data {
 			if predicate(v) {
 				removed++
 			} else {
-				newData = append(newData, v)
+				seg.data[n] = v
+				n++
 			}
 		}
-		seg.data = newData
+		clear(seg.data[n:])
+		seg.data = seg.data[:n]
 		seg.mu.Unlock()
 	}
 	return removed
@@ -444,15 +458,18 @@ func (l *segmentedList[T]) RetainFunc(predicate func(element T) bool) int {
 	removed := 0
 	for _, seg := range l.segments {
 		seg.mu.Lock()
-		newData := make([]T, 0, len(seg.data))
+		// Filter in-place
+		n := 0
 		for _, v := range seg.data {
-			if predicate(v) {
-				newData = append(newData, v)
-			} else {
+			if !predicate(v) {
 				removed++
+			} else {
+				seg.data[n] = v
+				n++
 			}
 		}
-		seg.data = newData
+		clear(seg.data[n:])
+		seg.data = seg.data[:n]
 		seg.mu.Unlock()
 	}
 	return removed
@@ -564,8 +581,8 @@ func (l *segmentedList[T]) SubList(from, to int) List[T] {
 func (l *segmentedList[T]) Reversed() iter.Seq[T] {
 	snap := l.ToSlice()
 	return func(yield func(T) bool) {
-		for i := len(snap) - 1; i >= 0; i-- {
-			if !yield(snap[i]) {
+		for _, v := range slices.Backward(snap) {
+			if !yield(v) {
 				return
 			}
 		}

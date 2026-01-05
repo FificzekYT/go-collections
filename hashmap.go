@@ -300,6 +300,11 @@ func (h *hashMap[K, V]) Clone() Map[K, V] {
 	return &hashMap[K, V]{m: maps.Clone(h.m)}
 }
 
+// ToGoMap returns a snapshot copy as a standard Go map[K]V.
+func (h *hashMap[K, V]) ToGoMap() map[K]V {
+	return maps.Clone(h.m)
+}
+
 // Filter returns a new map with entries satisfying predicate.
 func (h *hashMap[K, V]) Filter(predicate func(key K, value V) bool) Map[K, V] {
 	out := &hashMap[K, V]{m: make(map[K]V)}
@@ -325,13 +330,7 @@ func (h *hashMap[K, V]) Equals(other Map[K, V], valueEq Equaler[V]) bool {
 	return true
 }
 
-// ToGoMap returns a snapshot copy as a standard Go map[K]V.
-func (h *hashMap[K, V]) ToGoMap() map[K]V {
-	return maps.Clone(h.m)
-}
-
 // Compile-time conformance checks with concrete instantiation.
 var (
-	_ Map[int, string]    = (*hashMap[int, string])(nil)
-	_ GoMapView[int, int] = (*hashMap[int, int])(nil)
+	_ Map[int, string] = (*hashMap[int, string])(nil)
 )

@@ -40,6 +40,7 @@ func (d *arrayDeque[T]) IsEmpty() bool { return d.size == 0 }
 
 // Clear removes all elements (retains capacity).
 func (d *arrayDeque[T]) Clear() {
+	clear(d.buf)
 	d.head, d.tail, d.size = 0, 0, 0
 }
 
@@ -66,6 +67,9 @@ func (d *arrayDeque[T]) PopFront() (T, bool) {
 		return zero, false
 	}
 	v := d.buf[d.head]
+	// Clear slot to drop references promptly.
+	var zero T
+	d.buf[d.head] = zero
 	d.head = d.mod(d.head+1, len(d.buf))
 	d.size--
 	return v, true
@@ -96,6 +100,9 @@ func (d *arrayDeque[T]) PopBack() (T, bool) {
 	}
 	d.tail = d.mod(d.tail-1, len(d.buf))
 	v := d.buf[d.tail]
+	// Clear slot to drop references promptly.
+	var zero T
+	d.buf[d.tail] = zero
 	d.size--
 	return v, true
 }

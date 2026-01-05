@@ -40,6 +40,7 @@ func (q *arrayQueue[T]) IsEmpty() bool { return q.Size() == 0 }
 
 // Clear removes all elements (retains capacity).
 func (q *arrayQueue[T]) Clear() {
+	clear(q.data)
 	q.data = q.data[:0]
 	q.head = 0
 }
@@ -56,6 +57,11 @@ func (q *arrayQueue[T]) Enqueue(element T) {
 
 // EnqueueAll adds all elements to the back.
 func (q *arrayQueue[T]) EnqueueAll(elements ...T) {
+	if len(elements) == 0 {
+		return
+	}
+	// Pre-grow to reduce reallocations on large batches.
+	q.data = slices.Grow(q.data, len(elements))
 	q.data = append(q.data, elements...)
 }
 
@@ -66,6 +72,9 @@ func (q *arrayQueue[T]) Dequeue() (T, bool) {
 		return zero, false
 	}
 	v := q.data[q.head]
+	// Clear out the slot to avoid retaining references until compaction.
+	var zero T
+	q.data[q.head] = zero
 	q.head++
 	// Compact if head is large relative to slice to avoid unbounded growth.
 	// Threshold at > len/2 keeps amortized O(1) dequeue while limiting memory retention

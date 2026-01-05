@@ -2,6 +2,7 @@ package collections
 
 import (
 	"iter"
+	"slices"
 
 	"github.com/zhangyunhao116/skipmap"
 )
@@ -149,7 +150,11 @@ func (c *concurrentSkipMap[K, V]) RemoveKeysSeq(seq iter.Seq[K]) int {
 
 // RemoveFunc removes entries where predicate returns true. Returns count removed.
 func (c *concurrentSkipMap[K, V]) RemoveFunc(predicate func(key K, value V) bool) int {
-	dels := make([]K, 0, c.Size())
+	size := c.Size()
+	if size == 0 {
+		return 0
+	}
+	dels := make([]K, 0, size/2)
 	c.m.Range(func(k K, v V) bool {
 		if predicate(k, v) {
 			dels = append(dels, k)
@@ -604,8 +609,8 @@ func (c *concurrentSkipMap[K, V]) Ascend(action func(key K, value V) bool) {
 // Descend iterates all entries in descending key order (snapshot-based).
 func (c *concurrentSkipMap[K, V]) Descend(action func(key K, value V) bool) {
 	ents := c.Entries()
-	for i := len(ents) - 1; i >= 0; i-- {
-		if !action(ents[i].Key, ents[i].Value) {
+	for _, e := range slices.Backward(ents) {
+		if !action(e.Key, e.Value) {
 			return
 		}
 	}
@@ -624,9 +629,9 @@ func (c *concurrentSkipMap[K, V]) AscendFrom(pivot K, action func(key K, value V
 // DescendFrom iterates entries with keys <= pivot descending (snapshot-based).
 func (c *concurrentSkipMap[K, V]) DescendFrom(pivot K, action func(key K, value V) bool) {
 	ents := c.Entries()
-	for i := len(ents) - 1; i >= 0; i-- {
-		if ents[i].Key <= pivot {
-			if !action(ents[i].Key, ents[i].Value) {
+	for _, e := range slices.Backward(ents) {
+		if e.Key <= pivot {
+			if !action(e.Key, e.Value) {
 				return
 			}
 		}
@@ -637,8 +642,8 @@ func (c *concurrentSkipMap[K, V]) DescendFrom(pivot K, action func(key K, value 
 func (c *concurrentSkipMap[K, V]) Reversed() iter.Seq2[K, V] {
 	return func(yield func(K, V) bool) {
 		ents := c.Entries()
-		for i := len(ents) - 1; i >= 0; i-- {
-			if !yield(ents[i].Key, ents[i].Value) {
+		for _, e := range slices.Backward(ents) {
+			if !yield(e.Key, e.Value) {
 				return
 			}
 		}

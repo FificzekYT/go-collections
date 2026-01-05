@@ -38,7 +38,10 @@ func (s *arrayStack[T]) Size() int { return len(s.data) }
 func (s *arrayStack[T]) IsEmpty() bool { return len(s.data) == 0 }
 
 // Clear removes all elements (retains capacity).
-func (s *arrayStack[T]) Clear() { s.data = s.data[:0] }
+func (s *arrayStack[T]) Clear() {
+	clear(s.data)
+	s.data = s.data[:0]
+}
 
 // String returns a concise representation (bottom..top).
 func (s *arrayStack[T]) String() string {
@@ -59,6 +62,9 @@ func (s *arrayStack[T]) Pop() (T, bool) {
 		return zero, false
 	}
 	v := s.data[n-1]
+	// Clear last slot before shrinking to help GC drop references promptly.
+	var zero T
+	s.data[n-1] = zero
 	s.data = s.data[:n-1]
 	return v, true
 }

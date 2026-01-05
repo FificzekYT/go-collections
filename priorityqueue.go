@@ -38,6 +38,8 @@ func (h *heapWrapper[T]) Push(x any) {
 func (h *heapWrapper[T]) Pop() any {
 	n := len(h.pq.data)
 	x := h.pq.data[n-1]
+	var zero T
+	h.pq.data[n-1] = zero
 	h.pq.data = h.pq.data[:n-1]
 	return x
 }
@@ -104,7 +106,10 @@ func (pq *priorityQueue[T]) Size() int { return len(pq.data) }
 func (pq *priorityQueue[T]) IsEmpty() bool { return len(pq.data) == 0 }
 
 // Clear removes all elements (retains capacity).
-func (pq *priorityQueue[T]) Clear() { pq.data = pq.data[:0] }
+func (pq *priorityQueue[T]) Clear() {
+	clear(pq.data)
+	pq.data = pq.data[:0]
+}
 
 // String returns a concise representation.
 func (pq *priorityQueue[T]) String() string {

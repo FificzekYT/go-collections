@@ -127,7 +127,11 @@ func (s *concurrentHashSet[T]) RemoveSeq(seq iter.Seq[T]) int {
 
 // RemoveFunc removes elements satisfying predicate. Returns count removed.
 func (s *concurrentHashSet[T]) RemoveFunc(predicate func(element T) bool) int {
-	dels := make([]T, 0, s.Size())
+	size := s.Size()
+	if size == 0 {
+		return 0
+	}
+	dels := make([]T, 0, size/2)
 	s.m.Range(func(k T, _ struct{}) bool {
 		if predicate(k) {
 			dels = append(dels, k)
@@ -145,7 +149,11 @@ func (s *concurrentHashSet[T]) RemoveFunc(predicate func(element T) bool) int {
 
 // RetainFunc keeps only elements satisfying predicate. Returns count removed.
 func (s *concurrentHashSet[T]) RetainFunc(predicate func(element T) bool) int {
-	dels := make([]T, 0, s.Size())
+	size := s.Size()
+	if size == 0 {
+		return 0
+	}
+	dels := make([]T, 0, size/2)
 	s.m.Range(func(k T, _ struct{}) bool {
 		if !predicate(k) {
 			dels = append(dels, k)
