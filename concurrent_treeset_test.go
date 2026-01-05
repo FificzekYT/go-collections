@@ -666,8 +666,8 @@ func TestConcurrentTreeSet_SeqEarlyExit(t *testing.T) {
 func TestConcurrentTreeSet_RangeSeqEarlyExit(t *testing.T) {
 	t.Parallel()
 	s := NewConcurrentTreeSetOrdered[int]()
-	for i := 1; i <= 10; i++ {
-		s.Add(i)
+	for i := range 10 {
+		s.Add(i + 1)
 	}
 
 	// RangeSeq with early exit
