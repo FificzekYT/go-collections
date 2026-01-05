@@ -1716,7 +1716,7 @@ func (suite *SerializationErrorHandlingTestSuite) TestNilComparatorError() {
 
 	suite.Run("UnmarshalTreeSetGob", func() {
 		var buf bytes.Buffer
-		gob.NewEncoder(&buf).Encode([]int{1, 2, 3})
+		_ = gob.NewEncoder(&buf).Encode([]int{1, 2, 3})
 		_, err := UnmarshalTreeSetGob[int](buf.Bytes(), nil)
 		assert.Error(suite.T(), err, "Should fail with nil comparator")
 		assert.Contains(suite.T(), err.Error(), "comparator required")
@@ -1725,7 +1725,7 @@ func (suite *SerializationErrorHandlingTestSuite) TestNilComparatorError() {
 	suite.Run("UnmarshalTreeMapGob", func() {
 		entries := []serializableEntry[int, string]{{Key: 1, Value: "one"}}
 		var buf bytes.Buffer
-		gob.NewEncoder(&buf).Encode(entries)
+		_ = gob.NewEncoder(&buf).Encode(entries)
 		_, err := UnmarshalTreeMapGob[int, string](buf.Bytes(), nil)
 		assert.Error(suite.T(), err, "Should fail with nil comparator")
 		assert.Contains(suite.T(), err.Error(), "comparator required")
@@ -1740,7 +1740,7 @@ func (suite *SerializationErrorHandlingTestSuite) TestNilComparatorError() {
 
 	suite.Run("UnmarshalPriorityQueueGob", func() {
 		var buf bytes.Buffer
-		gob.NewEncoder(&buf).Encode([]int{1, 2, 3})
+		_ = gob.NewEncoder(&buf).Encode([]int{1, 2, 3})
 		_, err := UnmarshalPriorityQueueGob[int](buf.Bytes(), nil)
 		assert.Error(suite.T(), err, "Should fail with nil comparator")
 		assert.Contains(suite.T(), err.Error(), "comparator required")
