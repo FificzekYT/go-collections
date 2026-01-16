@@ -530,8 +530,8 @@ func NewConcurrentHashMapFrom[K comparable, V any](src map[K]V) ConcurrentMap[K,
 | Method | Description |
 |--------|-------------|
 | `GetOrCompute(key K, compute func() V) (V, bool)` | Atomically get or compute |
-| `LoadAndDelete(key K) (V, bool)` | Atomically load and delete |
-| `LoadOrStore(key K, value V) (V, bool)` | Atomically load or store |
+| `RemoveAndGet(key K) (V, bool)` | Atomically removes and returns |
+| `PutIfAbsent(key K, value V) (V, bool)` | Atomically stores if absent |
 | `CompareAndSwap(key K, old, new V, eq Equaler[V]) bool` | Atomic CAS |
 | `CompareAndDelete(key K, value V, eq Equaler[V]) bool` | Atomic compare-and-delete |
 
@@ -573,7 +573,7 @@ func NewConcurrentTreeMapFrom[K comparable, V any](cmpK Comparator[K], m map[K]V
 
 Lock-free concurrent sorted map backed by skip list. For `Ordered` keys only.
 
-**Atomicity Note:** Single-key operations (`Load`/`Store`/`LoadOrStore`/`LoadAndDelete`) are atomic. However, `CompareAndSwap` and `CompareAndDelete` are **best-effort** under high contention due to the lock-free nature of skip lists. For strict CAS semantics, use `ConcurrentTreeMap` instead.
+**Atomicity Note:** Single-key operations (`Get`/`Put`/`PutIfAbsent`/`RemoveAndGet`) are atomic. However, `CompareAndSwap` and `CompareAndDelete` are **best-effort** under high contention due to the lock-free nature of skip lists. For strict CAS semantics, use `ConcurrentTreeMap` instead.
 
 **Constructors:**
 
