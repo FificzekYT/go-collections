@@ -65,9 +65,6 @@ func TestConcurrentTreeMap_ConcurrentPutIfAbsentAndAtomics(t *testing.T) {
 		v, computed := m.GetOrCompute(n+1, func() int { return 42 })
 		require.True(t, computed, "GetOrCompute should compute for missing key")
 		require.Equal(t, 42, v, "Returned value should match expected")
-		v, loaded := m.LoadOrStore(n+1, 99)
-		require.True(t, loaded, "LoadOrStore should report loaded for existing key")
-		require.Equal(t, 42, v, "Returned value should match expected")
 		// first CAS should fail (no key)
 		require.False(t, m.CompareAndSwap(n+2, 0, 1, eqV[int]), "CompareAndSwap should be false on mismatch")
 		m.Put(n+2, 10)
@@ -76,13 +73,13 @@ func TestConcurrentTreeMap_ConcurrentPutIfAbsentAndAtomics(t *testing.T) {
 		_, ok := m.Get(n + 2)
 		require.False(t, ok, "Key should be deleted")
 
-		// LoadAndDelete
+		// RemoveAndGet
 		m.Put(n+3, 123)
-		v, ok = m.LoadAndDelete(n + 3)
-		require.True(t, ok, "LoadAndDelete should succeed for present key")
+		v, ok = m.RemoveAndGet(n + 3)
+		require.True(t, ok, "RemoveAndGet should succeed for present key")
 		require.Equal(t, 123, v, "Returned value should match expected")
 		_, ok = m.Get(n + 3)
-		require.False(t, ok, "Get should fail after LoadAndDelete removed the key")
+		require.False(t, ok, "Get should fail after RemoveAndGet removed the key")
 	})
 }
 
@@ -328,21 +325,6 @@ func TestConcurrentTreeMap_ForEachEarlyExit(t *testing.T) {
 	require.Equal(t, 1, count, "ForEach should stop when callback returns false")
 }
 
-func TestConcurrentTreeMap_LoadOrStoreScenarios(t *testing.T) {
-	t.Parallel()
-	m := NewConcurrentTreeMapOrdered[int, string]()
-
-	// LoadOrStore when key does not exist
-	v, loaded := m.LoadOrStore(1, "new")
-	require.False(t, loaded, "LoadOrStore should report not loaded for new key")
-	require.Equal(t, "new", v, "LoadOrStore should return stored value")
-
-	// LoadOrStore when key already exists
-	v, loaded = m.LoadOrStore(1, "different")
-	require.True(t, loaded, "LoadOrStore should report loaded for existing key")
-	require.Equal(t, "new", v, "LoadOrStore should return existing value, not new one")
-}
-
 func TestConcurrentTreeMap_AscendScenarios(t *testing.T) {
 	t.Parallel()
 	m := NewConcurrentTreeMapOrdered[int, string]()
@@ -407,16 +389,16 @@ func TestConcurrentTreeMap_CoverageSupplement(t *testing.T) {
 	require.True(t, m.ContainsValue("b", eqV[string]), "ContainsValue should find existing value")
 	require.False(t, m.ContainsValue("z", eqV[string]), "ContainsValue should be false for missing value")
 
-	// RemoveKeys
+	// RemoveAll
 	m.Put(3, "c")
 	m.Put(4, "d")
 	// keys: 2, 3, 4
-	require.Equal(t, 2, m.RemoveKeys(2, 3), "Returned value should match expected")
-	require.Equal(t, 1, m.Size(), "Size should be 1 after RemoveKeys")
+	require.Equal(t, 2, m.RemoveAll(2, 3), "Returned value should match expected")
+	require.Equal(t, 1, m.Size(), "Size should be 1 after RemoveAll")
 
-	// RemoveKeysSeq
+	// RemoveSeq
 	m.Put(5, "e")
-	removed := m.RemoveKeysSeq(func(yield func(int) bool) {
+	removed := m.RemoveSeq(func(yield func(int) bool) {
 		if !yield(4) {
 			return
 		}

@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"iter"
 
-	xsync "github.com/puzpuzpuz/xsync/v3"
+	"github.com/puzpuzpuz/xsync/v3"
 )
 
 // concurrentHashSet is a thread-safe hash set backed by xsync.MapOf[T,struct{}].

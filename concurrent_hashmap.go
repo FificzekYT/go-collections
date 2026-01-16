@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"iter"
 
-	xsync "github.com/puzpuzpuz/xsync/v3"
+	"github.com/puzpuzpuz/xsync/v3"
 )
 
 // concurrentHashMap is a thread-safe hash map backed by xsync.MapOf[K,V].
@@ -139,8 +139,8 @@ func (m *concurrentHashMap[K, V]) ContainsValue(value V, eq Equaler[V]) bool {
 	return found
 }
 
-// RemoveKeys removes all specified keys. Returns count removed.
-func (m *concurrentHashMap[K, V]) RemoveKeys(keys ...K) int {
+// RemoveAll removes all specified keys. Returns count removed.
+func (m *concurrentHashMap[K, V]) RemoveAll(keys ...K) int {
 	removed := 0
 	for _, k := range keys {
 		if _, ok := m.m.LoadAndDelete(k); ok {
@@ -150,8 +150,8 @@ func (m *concurrentHashMap[K, V]) RemoveKeys(keys ...K) int {
 	return removed
 }
 
-// RemoveKeysSeq removes keys from the sequence. Returns count removed.
-func (m *concurrentHashMap[K, V]) RemoveKeysSeq(seq iter.Seq[K]) int {
+// RemoveSeq removes keys from the sequence. Returns count removed.
+func (m *concurrentHashMap[K, V]) RemoveSeq(seq iter.Seq[K]) int {
 	removed := 0
 	for k := range seq {
 		if _, ok := m.m.LoadAndDelete(k); ok {
@@ -404,16 +404,9 @@ func (m *concurrentHashMap[K, V]) GetOrCompute(key K, compute func() V) (V, bool
 	return v, !loaded
 }
 
-// LoadAndDelete atomically loads and deletes the key.
-func (m *concurrentHashMap[K, V]) LoadAndDelete(key K) (V, bool) {
+// RemoveAndGet atomically removes and returns the value for key.
+func (m *concurrentHashMap[K, V]) RemoveAndGet(key K) (V, bool) {
 	return m.m.LoadAndDelete(key)
-}
-
-// LoadOrStore returns existing value if present, else stores the given value.
-// Returns (value, true) if the value already existed.
-func (m *concurrentHashMap[K, V]) LoadOrStore(key K, value V) (V, bool) {
-	v, loaded := m.m.LoadOrStore(key, value)
-	return v, loaded
 }
 
 // CompareAndSwap atomically replaces value if current equals old.

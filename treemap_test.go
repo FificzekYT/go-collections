@@ -361,20 +361,20 @@ func TestTreeMap_CoverageSupplement(t *testing.T) {
 	assert.True(t, m.ContainsValue("c", eqV[string]), "ContainsValue should find existing value")
 	assert.False(t, m.ContainsValue("z", eqV[string]), "ContainsValue should be false for missing value")
 
-	// RemoveKeys, RemoveKeysSeq
+	// RemoveAll, RemoveSeq
 	m.PutAll(NewTreeMapFrom(cmp.Compare[int], map[int]string{4: "d", 5: "e", 6: "f"}))
 	// keys: 2, 3, 4, 5, 6
-	removed := m.RemoveKeys(2, 3)
+	removed := m.RemoveAll(2, 3)
 	assert.Equal(t, 2, removed, "Removed count should match expected")
-	assert.Equal(t, 3, m.Size(), "Size should be 3 after RemoveKeys") // 4, 5, 6 remaining
-	removed = m.RemoveKeysSeq(func(yield func(int) bool) {
+	assert.Equal(t, 3, m.Size(), "Size should be 3 after RemoveAll") // 4, 5, 6 remaining
+	removed = m.RemoveSeq(func(yield func(int) bool) {
 		if !yield(4) {
 			return
 		}
 		yield(99) // not present
 	})
 	assert.Equal(t, 1, removed, "Removed count should match expected")
-	assert.Equal(t, 2, m.Size(), "Size should be 2 after RemoveKeysSeq") // 5, 6 remaining
+	assert.Equal(t, 2, m.Size(), "Size should be 2 after RemoveSeq") // 5, 6 remaining
 
 	// Values, Keys, Entries
 	ks := m.Keys()

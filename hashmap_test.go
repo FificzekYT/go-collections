@@ -52,15 +52,15 @@ func TestHashMap_BasicCRUD(t *testing.T) {
 	require.False(t, m.RemoveIf(2, "x", eqV[string]), "RemoveIf should fail when already removed")
 }
 
-func TestHashMap_PutSeq_RemoveKeysSeq(t *testing.T) {
+func TestHashMap_PutSeq_RemoveSeq(t *testing.T) {
 	t.Parallel()
 	m := NewHashMap[int, int]()
 	changed := m.PutSeq(seq2Of([]int{1, 2, 3, 2}, []int{10, 20, 30, 200}))
 	// Keys touched: 1,2,3 -> 3 unique
 	require.Equal(t, 3, changed, "PutSeq should report unique keys touched")
 	require.Equal(t, 3, m.Size(), "Size should reflect unique keys")
-	removed := m.RemoveKeysSeq(seqOf([]int{2, 4}))
-	require.Equal(t, 1, removed, "RemoveKeysSeq should remove only present keys")
+	removed := m.RemoveSeq(seqOf([]int{2, 4}))
+	require.Equal(t, 1, removed, "RemoveSeq should remove only present keys")
 	require.Equal(t, 2, m.Size(), "Size should decrease accordingly")
 }
 
@@ -202,11 +202,11 @@ func TestHashMap_Clear(t *testing.T) {
 	require.Equal(t, 0, m.Size(), "Size should be 0 after Clear")
 }
 
-func TestHashMap_RemoveKeys(t *testing.T) {
+func TestHashMap_RemoveAll(t *testing.T) {
 	t.Parallel()
 	m := NewHashMapFrom(map[int]string{1: "a", 2: "b", 3: "c"})
-	removed := m.RemoveKeys(1, 2)
-	require.Equal(t, 2, removed, "RemoveKeys should remove two keys")
+	removed := m.RemoveAll(1, 2)
+	require.Equal(t, 2, removed, "RemoveAll should remove two keys")
 	require.Equal(t, 1, m.Size(), "Size should decrease accordingly")
 	require.False(t, m.ContainsKey(1), "Key 1 should be removed")
 	require.False(t, m.ContainsKey(2), "Key 2 should be removed")

@@ -167,8 +167,8 @@ func (t *treeMap[K, V]) ContainsValue(value V, eq Equaler[V]) bool {
 	return found
 }
 
-// RemoveKeys removes all specified keys. Returns count removed.
-func (t *treeMap[K, V]) RemoveKeys(keys ...K) int {
+// RemoveAll removes all specified keys. Returns count removed.
+func (t *treeMap[K, V]) RemoveAll(keys ...K) int {
 	removed := 0
 	for _, k := range keys {
 		if _, ok := t.bt.Delete(mapEntry[K, V]{key: k}); ok {
@@ -178,8 +178,8 @@ func (t *treeMap[K, V]) RemoveKeys(keys ...K) int {
 	return removed
 }
 
-// RemoveKeysSeq removes keys from the sequence. Returns count removed.
-func (t *treeMap[K, V]) RemoveKeysSeq(seq iter.Seq[K]) int {
+// RemoveSeq removes keys from the sequence. Returns count removed.
+func (t *treeMap[K, V]) RemoveSeq(seq iter.Seq[K]) int {
 	removed := 0
 	for k := range seq {
 		if _, ok := t.bt.Delete(mapEntry[K, V]{key: k}); ok {

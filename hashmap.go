@@ -135,8 +135,8 @@ func (h *hashMap[K, V]) ContainsValue(value V, eq Equaler[V]) bool {
 	return false
 }
 
-// RemoveKeys removes all specified keys. Returns count removed.
-func (h *hashMap[K, V]) RemoveKeys(keys ...K) int {
+// RemoveAll removes all specified keys. Returns count removed.
+func (h *hashMap[K, V]) RemoveAll(keys ...K) int {
 	removed := 0
 	for _, k := range keys {
 		if _, ok := h.m[k]; ok {
@@ -147,8 +147,8 @@ func (h *hashMap[K, V]) RemoveKeys(keys ...K) int {
 	return removed
 }
 
-// RemoveKeysSeq removes keys from the sequence. Returns count removed.
-func (h *hashMap[K, V]) RemoveKeysSeq(seq iter.Seq[K]) int {
+// RemoveSeq removes keys from the sequence. Returns count removed.
+func (h *hashMap[K, V]) RemoveSeq(seq iter.Seq[K]) int {
 	removed := 0
 	for k := range seq {
 		if _, ok := h.m[k]; ok {

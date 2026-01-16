@@ -445,10 +445,10 @@ type Map[K, V any] interface {
 	ContainsValue(value V, eq Equaler[V]) bool
 
 	// --- Bulk Operations ---
-	// RemoveKeys removes all specified keys. Returns count removed.
-	RemoveKeys(keys ...K) int
-	// RemoveKeysSeq removes keys from the sequence. Returns count removed.
-	RemoveKeysSeq(seq iter.Seq[K]) int
+	// RemoveAll removes all specified keys. Returns count removed.
+	RemoveAll(keys ...K) int
+	// RemoveSeq removes keys from the sequence. Returns count removed.
+	RemoveSeq(seq iter.Seq[K]) int
 	// RemoveFunc removes entries where predicate returns true. Returns count removed.
 	RemoveFunc(predicate func(key K, value V) bool) int
 
@@ -597,14 +597,14 @@ type SortedMap[K, V any] interface {
 // 1. ATOMIC (✓): Guaranteed atomic in all implementations.
 //    - Single-key reads: Get, Contains, ContainsKey
 //    - Single-key writes: Add, Remove, Put
-//    - Atomic compound operations: AddIfAbsent, RemoveAndGet, LoadOrStore, LoadAndDelete, GetOrCompute
+//    - Atomic compound operations: AddIfAbsent, RemoveAndGet, PutIfAbsent, GetOrCompute
 //
 // 2. BEST-EFFORT (~): Atomic in hash-based implementations; may race in lock-free skip lists.
 //    - CompareAndSwap, CompareAndDelete, RemoveIf, ReplaceIf
 //    - These use load-then-modify patterns that can race under high contention.
 //
 // 3. NON-ATOMIC (✗): Never atomic as a whole; provide snapshot semantics.
-//    - Bulk operations: AddAll, RemoveAll, PutAll, RemoveKeys, RemoveFunc
+//    - Bulk operations: AddAll, RemoveAll, PutAll, RemoveFunc
 //    - Iteration: Seq, ForEach, Range, Keys, Values, Entries
 //    - Set algebra: Union, Intersection, Difference
 //    - Aggregations: Size (approximate), IsEmpty, Equals
@@ -645,10 +645,10 @@ type ConcurrentSortedSet[T any] interface {
 // All methods are safe for concurrent calls from multiple goroutines.
 //
 // Atomicity guarantees:
-//   - ATOMIC: Get, Put, Remove, ContainsKey, LoadOrStore, LoadAndDelete, GetOrCompute
+//   - ATOMIC: Get, Put, Remove, ContainsKey, PutIfAbsent, RemoveAndGet, GetOrCompute
 //   - BEST-EFFORT: CompareAndSwap, CompareAndDelete, RemoveIf, ReplaceIf
 //     (atomic in ConcurrentHashMap; may race in ConcurrentSkipMap)
-//   - NON-ATOMIC: PutAll, RemoveKeys, RemoveFunc, ReplaceAll, Keys, Values, Entries, Seq
+//   - NON-ATOMIC: PutAll, RemoveAll, RemoveFunc, ReplaceAll, Keys, Values, Entries, Seq
 //
 // Implementation notes:
 //   - ConcurrentHashMap (xsync.MapOf): All operations are strictly atomic.
@@ -658,18 +658,13 @@ type ConcurrentMap[K, V any] interface {
 	Map[K, V]
 
 	// GetOrCompute atomically returns existing value or computes and stores a new one.
-	// ATOMIC: Uses LoadOrCompute internally.
+	// ATOMIC: This is a single atomic operation.
 	// Returns (value, true) if computed (key was absent).
 	GetOrCompute(key K, compute func() V) (V, bool)
 
-	// LoadAndDelete atomically loads and deletes the key.
+	// RemoveAndGet atomically removes and returns the value for key.
 	// ATOMIC: This is a single atomic operation.
-	LoadAndDelete(key K) (V, bool)
-
-	// LoadOrStore atomically returns existing value or stores the given value.
-	// ATOMIC: This is a single atomic operation.
-	// Returns (value, true) if the value already existed.
-	LoadOrStore(key K, value V) (V, bool)
+	RemoveAndGet(key K) (V, bool)
 
 	// CompareAndSwap replaces value if current equals old.
 	// BEST-EFFORT: Atomic in ConcurrentHashMap; may race in ConcurrentSkipMap.

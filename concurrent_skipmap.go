@@ -11,7 +11,7 @@ import (
 )
 
 // concurrentSkipMap is a concurrent-safe sorted map backed by a lock-free skip list.
-//   - Single-key operations like Load/Store/LoadOrStore/LoadAndDelete are atomic.
+//   - Single-key operations like Load/Store/LoadAndDelete are atomic.
 //   - Scans (Range/Seq) and bulk operations are not atomic as a whole; they are
 //     best-effort snapshots under concurrency.
 //   - Navigation (Floor/Ceiling/etc.) and rank operations are implemented via scans (O(n)).
@@ -52,7 +52,7 @@ func (c *concurrentSkipMap[K, V]) String() string {
 // Note: Not atomic as a read-modify-write with respect to the previous value.
 // The implementation first loads the prior value (if any) and then stores the new value.
 // Under heavy concurrency, the returned "old" value can be stale if another writer
-// updates the same key between the Load and Store. Prefer LoadOrStore/LoadOrStoreLazy
+// updates the same key between the Load and Store. Prefer PutIfAbsent
 // or application-level Compute patterns when strict atomicity is required.
 func (c *concurrentSkipMap[K, V]) Put(key K, value V) (V, bool) {
 	old, ok := c.m.Load(key)
@@ -129,8 +129,8 @@ func (c *concurrentSkipMap[K, V]) ContainsValue(value V, eq Equaler[V]) bool {
 	return found
 }
 
-// RemoveKeys removes all specified keys. Returns count removed.
-func (c *concurrentSkipMap[K, V]) RemoveKeys(keys ...K) int {
+// RemoveAll removes all specified keys. Returns count removed.
+func (c *concurrentSkipMap[K, V]) RemoveAll(keys ...K) int {
 	removed := 0
 	for _, k := range keys {
 		if _, ok := c.m.LoadAndDelete(k); ok {
@@ -140,8 +140,8 @@ func (c *concurrentSkipMap[K, V]) RemoveKeys(keys ...K) int {
 	return removed
 }
 
-// RemoveKeysSeq removes keys from the sequence. Returns count removed.
-func (c *concurrentSkipMap[K, V]) RemoveKeysSeq(seq iter.Seq[K]) int {
+// RemoveSeq removes keys from the sequence. Returns count removed.
+func (c *concurrentSkipMap[K, V]) RemoveSeq(seq iter.Seq[K]) int {
 	removed := 0
 	for k := range seq {
 		if _, ok := c.m.LoadAndDelete(k); ok {
@@ -347,15 +347,8 @@ func (c *concurrentSkipMap[K, V]) GetOrCompute(key K, compute func() V) (V, bool
 	return v, !loaded
 }
 
-// LoadAndDelete atomically loads and deletes the key.
-func (c *concurrentSkipMap[K, V]) LoadAndDelete(key K) (V, bool) { return c.m.LoadAndDelete(key) }
-
-// LoadOrStore returns existing value if present, else stores the given value.
-// Returns (value, true) if the value already existed.
-func (c *concurrentSkipMap[K, V]) LoadOrStore(key K, value V) (V, bool) {
-	v, loaded := c.m.LoadOrStore(key, value)
-	return v, loaded
-}
+// RemoveAndGet atomically removes and returns the value for key.
+func (c *concurrentSkipMap[K, V]) RemoveAndGet(key K) (V, bool) { return c.m.LoadAndDelete(key) }
 
 // CompareAndSwap replaces value if current equals old (best-effort, not atomic).
 func (c *concurrentSkipMap[K, V]) CompareAndSwap(key K, old, new V, eq Equaler[V]) bool {

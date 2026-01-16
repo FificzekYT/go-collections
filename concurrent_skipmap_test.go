@@ -56,9 +56,6 @@ func TestConcurrentSkipMap_PutIfAbsentAndAtomics(t *testing.T) {
 		v, computed := m.GetOrCompute(n+1, func() int { return 42 })
 		require.True(t, computed, "GetOrCompute should compute for missing key")
 		require.Equal(t, 42, v, "Returned value should match expected")
-		v, loaded := m.LoadOrStore(n+1, 99)
-		require.True(t, loaded, "LoadOrStore should report loaded for existing key")
-		require.Equal(t, 42, v, "Returned value should match expected")
 		// CAS
 		require.False(t, m.CompareAndSwap(n+2, 0, 1, eqV[int]), "CompareAndSwap should be false on mismatch")
 		m.Put(n+2, 10)
@@ -187,16 +184,16 @@ func TestConcurrentSkipMap_PutAllAndPutSeq(t *testing.T) {
 	require.Equal(t, 4, m.Size(), "Size should be 4 after PutSeq")
 }
 
-func TestConcurrentSkipMap_RemoveKeysAndFunc(t *testing.T) {
+func TestConcurrentSkipMap_RemoveAllAndFunc(t *testing.T) {
 	t.Parallel()
 	m := NewConcurrentSkipMap[int, string]()
 	m.Put(1, "a")
 	m.Put(2, "b")
 	m.Put(3, "c")
-	// RemoveKeys
-	removed := m.RemoveKeys(1, 2)
+	// RemoveAll
+	removed := m.RemoveAll(1, 2)
 	require.Equal(t, 2, removed, "Removed count should match expected")
-	require.Equal(t, 1, m.Size(), "Size should be 1 after RemoveKeys")
+	require.Equal(t, 1, m.Size(), "Size should be 1 after RemoveAll")
 	// RemoveFunc
 	m.Put(4, "d")
 	m.Put(5, "e")
@@ -484,23 +481,23 @@ func TestConcurrentSkipMap_ContainsValueAndRemoveIf(t *testing.T) {
 	require.Equal(t, 2, m.Size(), "Size should be 2 after RemoveIf")
 }
 
-func TestConcurrentSkipMap_LoadAndDelete(t *testing.T) {
+func TestConcurrentSkipMap_RemoveAndGet(t *testing.T) {
 	t.Parallel()
 	m := NewConcurrentSkipMap[int, string]()
 	m.Put(1, "a")
 	m.Put(2, "b")
-	v, ok := m.LoadAndDelete(1)
-	require.True(t, ok, "LoadAndDelete should succeed for present key")
-	require.Equal(t, "a", v, "LoadAndDelete should return removed value")
+	v, ok := m.RemoveAndGet(1)
+	require.True(t, ok, "RemoveAndGet should succeed for present key")
+	require.Equal(t, "a", v, "RemoveAndGet should return removed value")
 	_, ok = m.Get(1)
-	require.False(t, ok, "Get should fail after LoadAndDelete removed the key")
+	require.False(t, ok, "Get should fail after RemoveAndGet removed the key")
 
-	// LoadAndDelete on non-existing key
-	_, ok = m.LoadAndDelete(99)
-	require.False(t, ok, "LoadAndDelete should fail for non-existing key")
+	// RemoveAndGet on non-existing key
+	_, ok = m.RemoveAndGet(99)
+	require.False(t, ok, "RemoveAndGet should fail for non-existing key")
 }
 
-func TestConcurrentSkipMap_RemoveKeysSeq(t *testing.T) {
+func TestConcurrentSkipMap_RemoveSeq(t *testing.T) {
 	t.Parallel()
 	m := NewConcurrentSkipMap[int, string]()
 	m.Put(1, "a")
@@ -508,7 +505,7 @@ func TestConcurrentSkipMap_RemoveKeysSeq(t *testing.T) {
 	m.Put(3, "c")
 	m.Put(4, "d")
 	m.Put(5, "e")
-	removed := m.RemoveKeysSeq(func(yield func(int) bool) {
+	removed := m.RemoveSeq(func(yield func(int) bool) {
 		if !yield(1) {
 			return
 		}
@@ -520,7 +517,7 @@ func TestConcurrentSkipMap_RemoveKeysSeq(t *testing.T) {
 		}
 	})
 	require.Equal(t, 3, removed, "Removed count should match expected")
-	require.Equal(t, 2, m.Size(), "Size should be 2 after RemoveKeysSeq")
+	require.Equal(t, 2, m.Size(), "Size should be 2 after RemoveSeq")
 }
 
 func TestConcurrentSkipMap_CoverageSupplement(t *testing.T) {

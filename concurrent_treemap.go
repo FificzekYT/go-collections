@@ -15,7 +15,7 @@ import (
 //   - Single-key operations are atomic under the mutex.
 //   - Iteration methods (Seq/ForEach/Range*/Ascend*/Reversed) operate on snapshots to avoid holding locks
 //     while invoking user callbacks.
-//   - For atomic compound operations (Compute*/Merge/GetOrCompute/LoadOrStore/CompareAnd*), user callbacks
+//   - For atomic compound operations (Compute*/Merge/GetOrCompute/PutIfAbsent/CompareAnd*), user callbacks
 //     are executed while holding the lock. Avoid calling back into the same map from those callbacks.
 type concurrentTreeMap[K any, V any] struct {
 	mu sync.RWMutex
@@ -164,15 +164,15 @@ func (c *concurrentTreeMap[K, V]) ContainsValue(value V, eq Equaler[V]) bool {
 	return false
 }
 
-// RemoveKeys removes all specified keys. Returns count removed.
-func (c *concurrentTreeMap[K, V]) RemoveKeys(keys ...K) int {
+// RemoveAll removes all specified keys. Returns count removed.
+func (c *concurrentTreeMap[K, V]) RemoveAll(keys ...K) int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.tm.RemoveKeys(keys...)
+	return c.tm.RemoveAll(keys...)
 }
 
-// RemoveKeysSeq removes keys from the sequence. Returns count removed.
-func (c *concurrentTreeMap[K, V]) RemoveKeysSeq(seq iter.Seq[K]) int {
+// RemoveSeq removes keys from the sequence. Returns count removed.
+func (c *concurrentTreeMap[K, V]) RemoveSeq(seq iter.Seq[K]) int {
 	var (
 		keys []K
 		size int
@@ -375,23 +375,11 @@ func (c *concurrentTreeMap[K, V]) GetOrCompute(key K, compute func() V) (V, bool
 	return v, true
 }
 
-// LoadAndDelete atomically loads and deletes the key.
-func (c *concurrentTreeMap[K, V]) LoadAndDelete(key K) (V, bool) {
+// RemoveAndGet atomically removes and returns the value for key.
+func (c *concurrentTreeMap[K, V]) RemoveAndGet(key K) (V, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.tm.Remove(key)
-}
-
-// LoadOrStore returns existing value if present, else stores the given value.
-// Returns (value, true) if the value already existed.
-func (c *concurrentTreeMap[K, V]) LoadOrStore(key K, value V) (V, bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if v, ok := c.tm.Get(key); ok {
-		return v, true
-	}
-	c.tm.Put(key, value)
-	return value, false
 }
 
 // CompareAndSwap atomically replaces value if current equals old.

@@ -28,12 +28,9 @@ func TestConcurrentHashMap_Basic(t *testing.T) {
 	v, computed := m.GetOrCompute(2, func() string { return "b" })
 	assert.True(t, computed, "GetOrCompute should compute on absent key")
 	assert.Equal(t, "b", v, "GetOrCompute should return computed value")
-	v, loaded := m.LoadOrStore(2, "bb")
-	assert.True(t, loaded, "LoadOrStore should report loaded on existing key")
-	assert.Equal(t, "b", v, "LoadOrStore should return existing value")
-	v, ok = m.LoadAndDelete(2)
-	require.True(t, ok, "LoadAndDelete should succeed for present key")
-	assert.Equal(t, "b", v, "LoadAndDelete should return removed value")
+	v, ok = m.RemoveAndGet(2)
+	require.True(t, ok, "RemoveAndGet should succeed for present key")
+	assert.Equal(t, "b", v, "RemoveAndGet should return removed value")
 }
 
 func TestConcurrentHashMap_CompareAndOps(t *testing.T) {
@@ -126,7 +123,7 @@ func TestConcurrentHashMap_GetOrDefaultAndRemove(t *testing.T) {
 	require.False(t, ok, "Get should be false for removed key")
 }
 
-func TestConcurrentHashMap_ContainsAndRemoveKeys(t *testing.T) {
+func TestConcurrentHashMap_ContainsAndRemoveAll(t *testing.T) {
 	t.Parallel()
 	m := NewConcurrentHashMap[int, string]()
 	m.Put(1, "a")
@@ -148,15 +145,15 @@ func TestConcurrentHashMap_ContainsAndRemoveKeys(t *testing.T) {
 	assert.False(t, removed, "RemoveIf should be false when value mismatches")
 	assert.True(t, m.ContainsKey(2), "ContainsKey should be true for present key")
 
-	// RemoveKeys
-	count := m.RemoveKeys(2, 3, 99)
+	// RemoveAll
+	count := m.RemoveAll(2, 3, 99)
 	assert.Equal(t, 2, count, "Count should match expected")
 	assert.True(t, m.IsEmpty(), "IsEmpty should be true")
 
-	// RemoveKeysSeq
+	// RemoveSeq
 	m.Put(4, "d")
 	m.Put(5, "e")
-	count = m.RemoveKeysSeq(func(yield func(int) bool) {
+	count = m.RemoveSeq(func(yield func(int) bool) {
 		if !yield(4) {
 			return
 		}
@@ -505,14 +502,14 @@ func TestConcurrentHashMap_SeqValuesEarlyExit(t *testing.T) {
 	require.Equal(t, 5, count, "SeqValues should support early exit")
 }
 
-func TestConcurrentHashMap_LoadAndDeleteNotFound(t *testing.T) {
+func TestConcurrentHashMap_RemoveAndGetNotFound(t *testing.T) {
 	t.Parallel()
 	m := NewConcurrentHashMap[int, string]()
 	m.Put(1, "a")
 
-	// LoadAndDelete on non-existing key
-	_, ok := m.LoadAndDelete(99)
-	require.False(t, ok, "LoadAndDelete should fail for non-existing key")
+	// RemoveAndGet on non-existing key
+	_, ok := m.RemoveAndGet(99)
+	require.False(t, ok, "RemoveAndGet should fail for non-existing key")
 }
 
 func TestConcurrentHashMap_CompareAndDeleteNotFound(t *testing.T) {
@@ -542,12 +539,3 @@ func TestConcurrentHashMap_GetOrComputeExisting(t *testing.T) {
 	require.Equal(t, "existing", v, "GetOrCompute should return existing value")
 }
 
-func TestConcurrentHashMap_LoadOrStoreNew(t *testing.T) {
-	t.Parallel()
-	m := NewConcurrentHashMap[int, string]()
-
-	// LoadOrStore when key does not exist
-	v, loaded := m.LoadOrStore(1, "new")
-	require.False(t, loaded, "LoadOrStore should report not loaded for new key")
-	require.Equal(t, "new", v, "LoadOrStore should return stored value")
-}
